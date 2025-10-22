@@ -98,7 +98,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
   };
 
   const handleAddReview = () => {
-    console.log('Adding review for recipient:', selectedRecipient?.recipientName);
+    console.log('Adding review for recipient:', selectedRecipient?.name);
     console.log('Comment:', recipientComment);
     setShowCommentModal(false);
     setRecipientComment('');
