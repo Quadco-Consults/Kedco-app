@@ -4,9 +4,10 @@ import { prisma } from '@/lib/db';
 // PATCH /api/memos/[id]/approvals/[approvalId] - Update approval status
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; approvalId: string } }
+  { params }: { params: Promise<{ id: string; approvalId: string }> }
 ) {
   try {
+    const { id, approvalId } = await params;
     const body = await request.json();
     const { status, comments } = body;
 
@@ -19,7 +20,7 @@ export async function PATCH(
 
     // Update the approval
     const approval = await prisma.memoApproval.update({
-      where: { id: params.approvalId },
+      where: { id: approvalId },
       data: {
         status,
         comments,
@@ -39,7 +40,7 @@ export async function PATCH(
     // Check if this was a rejection
     if (status === 'REJECTED') {
       await prisma.memo.update({
-        where: { id: params.id },
+        where: { id },
         data: { status: 'REJECTED' },
       });
     } else {
@@ -51,7 +52,7 @@ export async function PATCH(
 
       if (allApproved) {
         await prisma.memo.update({
-          where: { id: params.id },
+          where: { id },
           data: {
             status: 'APPROVED',
             approvedAt: new Date(),
