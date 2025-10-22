@@ -30,6 +30,9 @@ interface DocumentMovement {
   action: string;
   movedAt: string;
   notes?: string;
+  comments?: string;
+  fromDepartment?: string;
+  toDepartment?: string;
   movedBy: {
     firstName: string;
     lastName: string;
@@ -42,6 +45,15 @@ interface DocumentDetail {
   referenceNumber: string;
   status: string;
   type?: string;
+  description?: string;
+  filePath?: string;
+  fileName?: string;
+  fileSize?: number;
+  mimeType?: string;
+  isExternal?: boolean;
+  priority?: string;
+  dueDate?: string;
+  createdAt: string;
   createdBy: {
     id: string;
     firstName: string;
@@ -232,7 +244,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                     <div className="mt-1 flex items-center gap-2">
                       <PaperClipIcon className="h-4 w-4 text-gray-400" />
                       <span className="text-sm text-gray-900">
-                        {document.fileName} ({(document.fileSize / 1024 / 1024).toFixed(2)} MB)
+                        {document.fileName} {document.fileSize && `(${(document.fileSize / 1024 / 1024).toFixed(2)} MB)`}
                       </span>
                     </div>
                   </div>
@@ -267,9 +279,11 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                         <DocumentTextIcon className="mx-auto h-16 w-16 text-gray-400" />
                         <div>
                           <p className="text-sm font-medium text-gray-900">{document.fileName}</p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            Size: {(document.fileSize / 1024 / 1024).toFixed(2)} MB
-                          </p>
+                          {document.fileSize && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Size: {(document.fileSize / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          )}
                         </div>
                         <button
                           onClick={handleDownloadOriginal}
@@ -318,7 +332,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                   <div className="space-y-6">
                     {document.movements.map((movement, index) => (
                       <div key={movement.id} className="relative flex gap-4">
-                        {index !== document.movements.length - 1 && (
+                        {index !== (document.movements?.length || 0) - 1 && (
                           <div className="absolute left-4 top-8 h-full w-0.5 bg-gray-200" />
                         )}
 

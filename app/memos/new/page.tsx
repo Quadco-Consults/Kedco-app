@@ -139,12 +139,16 @@ export default function NewMemoPage() {
         .map((u: User) => u.id);
 
       // Create the memo
+      const departmentId = typeof user.department === 'string'
+        ? user.department
+        : (user.department as { id: string } | undefined)?.id || null;
+
       const memoData = {
         subject,
         memoBody: content,
         type: memoType,
         priority,
-        departmentId: user.departmentId || null,
+        departmentId,
         createdById: user.id,
         recipients: recipientIds,
       };
@@ -385,7 +389,7 @@ export default function NewMemoPage() {
                                   {user.firstName} {user.lastName}
                                 </p>
                                 <p className="text-xs text-gray-600">
-                                  {user.role} - {user.department || 'N/A'}
+                                  {user.role} - {typeof user.department === 'string' ? user.department : user.department?.name || 'N/A'}
                                 </p>
                               </div>
                             </label>
@@ -419,7 +423,7 @@ export default function NewMemoPage() {
                                     {user.firstName} {user.lastName}
                                   </p>
                                   <p className="text-xs text-gray-600">
-                                    {user.role} - {user.department || 'N/A'}
+                                    {user.role} - {typeof user.department === 'string' ? user.department : user.department?.name || 'N/A'}
                                   </p>
                                 </div>
                                 <div className="flex gap-1">
