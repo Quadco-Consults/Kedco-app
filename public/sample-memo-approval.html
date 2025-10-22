@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Approval Request Memo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+            padding: 40px;
+            max-width: 850px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #22c55e;
+            padding-bottom: 20px;
+        }
+        .logo-section {
+            margin-bottom: 15px;
+        }
+        .logo-text {
+            font-size: 32px;
+            font-weight: bold;
+            color: #22c55e;
+            letter-spacing: 3px;
+        }
+        .company-name {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .company-address {
+            font-size: 12px;
+            color: #888;
+            margin-top: 3px;
+        }
+        .memo-badge {
+            background: #22c55e;
+            color: white;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+        .memo-header {
+            background: #f9fafb;
+            border-left: 4px solid #22c55e;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+        .memo-header-row {
+            display: flex;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .memo-header-row:last-child {
+            border-bottom: none;
+        }
+        .memo-label {
+            font-weight: 600;
+            width: 150px;
+            color: #374151;
+            font-size: 14px;
+        }
+        .memo-value {
+            flex: 1;
+            color: #1f2937;
+            font-size: 14px;
+        }
+        .priority-high {
+            background: #fed7aa;
+            color: #c2410c;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 12px;
+            display: inline-block;
+        }
+        h1 {
+            color: #1f2937;
+            margin: 30px 0 20px 0;
+            font-size: 24px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        h2 {
+            color: #22c55e;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+        }
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        .approval-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 25px 0;
+            border-radius: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th {
+            background: #22c55e;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+        .total-row {
+            background: #dcfce7 !important;
+            font-weight: bold;
+        }
+        .signature-section {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
+        }
+        .signature-box {
+            width: 48%;
+        }
+        .signature-line {
+            border-top: 2px solid #333;
+            margin-top: 50px;
+            padding-top: 10px;
+        }
+        .signature-label {
+            font-weight: 600;
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+            font-size: 11px;
+            color: #666;
+        }
+        .approval-section {
+            margin-top: 50px;
+            padding: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f9fafb;
+        }
+        .approval-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: #22c55e;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .approval-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px dashed #d1d5db;
+        }
+        .approval-row:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-section">
+            <div class="logo-text">KEDCO</div>
+            <div class="company-name">Kano Electricity Distribution Company</div>
+            <div class="company-address">No 1 Niger Street, Post Office Rd, Fagge, Kano | Tel: 0700 5555 1111</div>
+            <span class="memo-badge">OFFICIAL MEMORANDUM</span>
+        </div>
+    </div>
+
+    <div class="memo-header">
+        <div class="memo-header-row">
+            <div class="memo-label">REFERENCE NO:</div>
+            <div class="memo-value"><strong>MEM-2025-003</strong></div>
+        </div>
+        <div class="memo-header-row">
+            <div class="memo-label">FROM:</div>
+            <div class="memo-value">Finance Department</div>
+        </div>
+        <div class="memo-header-row">
+            <div class="memo-label">TO:</div>
+            <div class="memo-value">Managing Director</div>
+        </div>
+        <div class="memo-header-row">
+            <div class="memo-label">DATE:</div>
+            <div class="memo-value">October 18, 2025</div>
+        </div>
+        <div class="memo-header-row">
+            <div class="memo-label">PRIORITY:</div>
+            <div class="memo-value"><span class="priority-high">HIGH</span></div>
+        </div>
+        <div class="memo-header-row">
+            <div class="memo-label">SUBJECT:</div>
+            <div class="memo-value"><strong>Budget Approval Request for Fiscal Year 2025</strong></div>
+        </div>
+    </div>
+
+    <h1>Memorandum for Approval</h1>
+
+    <h2>1. Purpose</h2>
+    <p>
+        This memorandum seeks the Managing Director's approval for the proposed budget allocation for Fiscal Year 2025.
+        The Finance Department has conducted a comprehensive review of operational requirements and strategic objectives
+        to formulate this budget proposal.
+    </p>
+
+    <h2>2. Background</h2>
+    <p>
+        In line with our strategic planning cycle, the Finance Department has prepared the FY 2025 budget based on:
+    </p>
+    <ul style="margin-left: 30px; margin-bottom: 15px;">
+        <li>Historical expenditure analysis from FY 2024</li>
+        <li>Projected operational requirements for 2025</li>
+        <li>Strategic infrastructure development initiatives</li>
+        <li>Regulatory and compliance obligations</li>
+        <li>Projected revenue streams and cost optimization measures</li>
+    </ul>
+
+    <h2>3. Proposed Budget Summary</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Budget Category</th>
+                <th>Description</th>
+                <th>Amount (NGN)</th>
+                <th>% of Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Operations & Maintenance</td>
+                <td>Day-to-day operational expenses and routine maintenance</td>
+                <td>850,000,000</td>
+                <td>34.7%</td>
+            </tr>
+            <tr>
+                <td>Infrastructure Development</td>
+                <td>Network expansion, upgrades, and capital projects</td>
+                <td>650,000,000</td>
+                <td>26.5%</td>
+            </tr>
+            <tr>
+                <td>Human Resources</td>
+                <td>Salaries, benefits, training, and staff development</td>
+                <td>480,000,000</td>
+                <td>19.6%</td>
+            </tr>
+            <tr>
+                <td>Technology & Equipment</td>
+                <td>IT systems, software, and technical equipment</td>
+                <td>250,000,000</td>
+                <td>10.2%</td>
+            </tr>
+            <tr>
+                <td>Customer Service</td>
+                <td>Service centers, customer support, and engagement</td>
+                <td>120,000,000</td>
+                <td>4.9%</td>
+            </tr>
+            <tr>
+                <td>Contingency Reserve</td>
+                <td>Emergency fund and unforeseen expenses</td>
+                <td>100,000,000</td>
+                <td>4.1%</td>
+            </tr>
+            <tr class="total-row">
+                <td colspan="2"><strong>TOTAL PROPOSED BUDGET</strong></td>
+                <td><strong>2,450,000,000</strong></td>
+                <td><strong>100%</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>4. Justification</h2>
+    <p>
+        The proposed budget of NGN 2.45 billion represents a 12% increase from FY 2024 allocation. This increase is
+        justified by the following factors:
+    </p>
+    <ul style="margin-left: 30px; margin-bottom: 15px;">
+        <li><strong>Inflation Adjustment:</strong> 8% inflation rate adjustment for operational costs</li>
+        <li><strong>Network Expansion:</strong> Planned coverage extension to 15 new communities</li>
+        <li><strong>Technology Upgrade:</strong> Migration to smart metering infrastructure</li>
+        <li><strong>Regulatory Compliance:</strong> Enhanced reporting and compliance requirements</li>
+        <li><strong>Staff Development:</strong> Comprehensive training programs for technical capacity building</li>
+    </ul>
+
+    <h2>5. Expected Outcomes</h2>
+    <p>Approval of this budget will enable KEDCO to:</p>
+    <ul style="margin-left: 30px; margin-bottom: 15px;">
+        <li>Maintain uninterrupted service delivery across all service areas</li>
+        <li>Expand network coverage to underserved communities</li>
+        <li>Improve operational efficiency through technology adoption</li>
+        <li>Enhance customer satisfaction through improved service quality</li>
+        <li>Meet all regulatory and statutory obligations</li>
+        <li>Build technical capacity through staff training and development</li>
+    </ul>
+
+    <div class="approval-box">
+        <h3 style="margin: 0 0 10px 0; color: #92400e; font-size: 14px;">ACTION REQUIRED</h3>
+        <p style="margin: 0; color: #92400e; font-size: 13px;">
+            <strong>The Finance Department respectfully requests the Managing Director's approval for the FY 2025
+            budget as detailed above.</strong> Upon approval, the budget will be implemented effective January 1, 2025,
+            with quarterly reviews and adjustments as necessary.
+        </p>
+    </div>
+
+    <h2>6. Recommendation</h2>
+    <p>
+        The Finance Department strongly recommends approval of this budget to ensure KEDCO's operational continuity,
+        strategic growth, and ability to meet stakeholder expectations in FY 2025.
+    </p>
+
+    <div class="signature-section">
+        <div class="signature-box">
+            <div class="signature-line">
+                <div class="signature-label">Prepared & Submitted By</div>
+                <div style="margin-top: 10px; font-weight: 600;">John Doe</div>
+                <div style="font-size: 13px; color: #666;">Head of Finance Department</div>
+                <div style="font-size: 12px; color: #888; margin-top: 5px;">Date: October 18, 2025</div>
+            </div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-line">
+                <div class="signature-label">Reviewed By</div>
+                <div style="margin-top: 10px; font-weight: 600;">Sarah Williams</div>
+                <div style="font-size: 13px; color: #666;">Chief Financial Officer</div>
+                <div style="font-size: 12px; color: #888; margin-top: 5px;">Date: October 18, 2025</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="approval-section">
+        <div class="approval-title">For Managing Director's Action</div>
+        <div class="approval-row">
+            <div>
+                <div style="font-weight: 600; margin-bottom: 5px;">☐ APPROVED</div>
+                <div style="font-size: 12px; color: #666;">Budget approved as submitted</div>
+            </div>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 5px;">☐ APPROVED WITH MODIFICATIONS</div>
+                <div style="font-size: 12px; color: #666;">Approved with noted changes</div>
+            </div>
+            <div>
+                <div style="font-weight: 600; margin-bottom: 5px;">☐ NOT APPROVED</div>
+                <div style="font-size: 12px; color: #666;">Requires revision</div>
+            </div>
+        </div>
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #d1d5db;">
+            <div style="font-weight: 600; font-size: 13px; margin-bottom: 10px;">Comments/Remarks:</div>
+            <div style="border: 1px solid #d1d5db; min-height: 80px; padding: 10px; background: white; border-radius: 4px;">
+
+            </div>
+        </div>
+        <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+            <div style="width: 45%;">
+                <div style="border-top: 2px solid #333; margin-top: 40px; padding-top: 10px;">
+                    <div style="font-weight: 600; font-size: 12px;">Signature</div>
+                    <div style="font-size: 11px; color: #666; margin-top: 5px;">Managing Director</div>
+                </div>
+            </div>
+            <div style="width: 45%;">
+                <div style="border-top: 2px solid #333; margin-top: 40px; padding-top: 10px;">
+                    <div style="font-weight: 600; font-size: 12px;">Date</div>
+                    <div style="font-size: 11px; color: #666; margin-top: 5px;">_____________________</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p style="font-weight: 600; color: #22c55e; margin-bottom: 10px;">KANO ELECTRICITY DISTRIBUTION COMPANY</p>
+        <p>No 1 Niger Street, Post Office Rd, Fagge, Kano</p>
+        <p>Tel: 0700 5555 1111 | Email: info@kedco.ng | Website: www.kedco.ng</p>
+        <p style="margin-top: 15px; font-style: italic; font-size: 10px;">
+            This is an official KEDCO document. Confidential - For Internal Use Only.
+        </p>
+    </div>
+</body>
+</html>

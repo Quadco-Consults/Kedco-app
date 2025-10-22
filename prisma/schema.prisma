@@ -1,0 +1,185 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id             String           @id @default(uuid())
+  email          String           @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           Role             @default(STAFF)
+  departmentId   String?
+  department     Department?      @relation(fields: [departmentId], references: [id])
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  lastLogin      DateTime?
+
+  documentsCreated    Document[]       @relation("DocumentCreator")
+  memosCreated        Memo[]           @relation("MemoCreator")
+  documentMovements   DocumentMovement[]
+  memoRecipients      MemoRecipient[]
+  documentComments    DocumentComment[]
+
+  @@map("users")
+}
+
+// Department model
+model Department {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  code        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  users       User[]
+  documents   Document[]
+  memos       Memo[]
+
+  @@map("departments")
+}
+
+// Document model
+model Document {
+  id                String              @id @default(uuid())
+  referenceNumber   String              @unique
+  title             String
+  description       String?
+  filePath          String?
+  fileName          String?
+  fileSize          Int?
+  mimeType          String?
+  status            DocumentStatus      @default(PENDING)
+  priority          Priority            @default(MEDIUM)
+  dueDate           DateTime?
+  isExternal        Boolean             @default(false)
+  currentDepartmentId String?
+  currentDepartment Department?         @relation(fields: [currentDepartmentId], references: [id])
+  createdById       String
+  createdBy         User                @relation("DocumentCreator", fields: [createdById], references: [id])
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  movements         DocumentMovement[]
+  comments          DocumentComment[]
+
+  @@map("documents")
+}
+
+// Document Movement model (tracks document journey)
+model DocumentMovement {
+  id            String     @id @default(uuid())
+  documentId    String
+  document      Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fromDepartment String?
+  toDepartment  String
+  movedById     String
+  movedBy       User       @relation(fields: [movedById], references: [id])
+  comments      String?
+  movedAt       DateTime   @default(now())
+
+  @@map("document_movements")
+}
+
+// Document Comment model (for external documents)
+model DocumentComment {
+  id          String     @id @default(uuid())
+  documentId  String
+  document    Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  comment     String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("document_comments")
+}
+
+// Memo model
+model Memo {
+  id                String          @id @default(uuid())
+  referenceNumber   String          @unique
+  subject           String
+  body              String
+  type              MemoType
+  priority          Priority        @default(MEDIUM)
+  status            MemoStatus      @default(DRAFT)
+  departmentId      String?
+  department        Department?     @relation(fields: [departmentId], references: [id])
+  createdById       String
+  createdBy         User            @relation("MemoCreator", fields: [createdById], references: [id])
+  approvedAt        DateTime?
+  sentAt            DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  recipients        MemoRecipient[]
+
+  @@map("memos")
+}
+
+// Memo Recipient model
+model MemoRecipient {
+  id          String     @id @default(uuid())
+  memoId      String
+  memo        Memo       @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  hasRead     Boolean    @default(false)
+  readAt      DateTime?
+
+  @@unique([memoId, userId])
+  @@map("memo_recipients")
+}
+
+// Enums
+enum Role {
+  MD
+  DEPARTMENT_HEAD
+  STAFF
+  ADMIN
+  AUDITOR
+}
+
+enum DocumentStatus {
+  PENDING
+  IN_TRANSIT
+  UNDER_REVIEW
+  RECEIVED
+  ARCHIVED
+}
+
+enum MemoStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SENT
+  ARCHIVED
+}
+
+enum MemoType {
+  INTERNAL
+  APPROVAL
+  EXTERNAL_LETTER
+  AUDIT_LETTER
+  CIRCULAR
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
