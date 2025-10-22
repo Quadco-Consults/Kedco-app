@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { readFile } from 'fs/promises';
+import path from 'path';
 
 // GET /api/memos/[id]/pdf - Generate PDF for a memo
 export async function GET(
@@ -58,6 +60,7 @@ export async function GET(
                 firstName: true,
                 lastName: true,
                 role: true,
+                signaturePath: true,
                 department: {
                   select: {
                     name: true,
@@ -252,7 +255,7 @@ export async function GET(
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Comments Section
+    // Comments/Minutes Section with Signature Style
     if (memo.comments.length > 0) {
       // Check if we need a new page
       if (yPosition + 50 > doc.internal.pageSize.height - 40) {
@@ -263,34 +266,101 @@ export async function GET(
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.text('COMMENTS/MINUTES', 20, yPosition);
-      yPosition += 10;
+      yPosition += 15;
 
-      // Create comments table
-      const commentsData = memo.comments.map((comment, index) => [
-        (index + 1).toString(),
-        `${comment.user.firstName} ${comment.user.lastName}`,
-        comment.user.role,
-        new Date(comment.createdAt).toLocaleDateString(),
-        comment.comment,
-      ]);
+      // Display each comment with signature block format
+      for (const comment of memo.comments) {
+        // Check if we need a new page for this comment
+        const estimatedHeight = 50; // Approximate height per comment block
+        if (yPosition + estimatedHeight > doc.internal.pageSize.height - 40) {
+          doc.addPage();
+          yPosition = 20;
+        }
 
-      autoTable(doc, {
-        startY: yPosition,
-        head: [['#', 'User', 'Role', 'Date', 'Comment']],
-        body: commentsData,
-        theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
-        styles: { fontSize: 9, cellPadding: 3 },
-        columnStyles: {
-          0: { cellWidth: 10 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 30 },
-          4: { cellWidth: 90 },
-        },
-      });
+        // Draw a light border box for each comment
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
 
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
+        // Comment content
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+
+        const commentLines = doc.splitTextToSize(comment.comment, pageWidth - 50);
+        const commentHeight = commentLines.length * 5 + 35;
+
+        // Draw border box
+        doc.rect(20, yPosition - 5, pageWidth - 40, commentHeight);
+
+        // Comment text
+        doc.text(commentLines, 25, yPosition);
+        yPosition += commentLines.length * 5 + 10;
+
+        // Draw horizontal line above signature area
+        doc.setDrawColor(100, 100, 100);
+        doc.line(25, yPosition, pageWidth - 25, yPosition);
+        yPosition += 8;
+
+        // Try to add signature image if available
+        let signatureAdded = false;
+        if (comment.user.signaturePath) {
+          try {
+            const signaturePath = path.join(process.cwd(), 'public', comment.user.signaturePath);
+            const signatureBuffer = await readFile(signaturePath);
+            const signatureBase64 = signatureBuffer.toString('base64');
+            const signatureExt = comment.user.signaturePath.split('.').pop()?.toLowerCase();
+
+            let imageType = 'PNG';
+            if (signatureExt === 'jpg' || signatureExt === 'jpeg') {
+              imageType = 'JPEG';
+            } else if (signatureExt === 'svg') {
+              imageType = 'SVG';
+            }
+
+            // Add signature image (small size, positioned above name)
+            const signatureWidth = 30;
+            const signatureHeight = 15;
+            doc.addImage(
+              `data:image/${signatureExt};base64,${signatureBase64}`,
+              imageType,
+              25,
+              yPosition - 3,
+              signatureWidth,
+              signatureHeight
+            );
+            signatureAdded = true;
+          } catch (error) {
+            console.error('Error adding signature to PDF:', error);
+            // Continue without signature if there's an error
+          }
+        }
+
+        // Left side: Name and Role (positioned below signature if present)
+        const nameYPosition = signatureAdded ? yPosition + 13 : yPosition;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text(`${comment.user.firstName} ${comment.user.lastName}`, 25, nameYPosition);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(80, 80, 80);
+        doc.text(`${comment.user.role}${comment.user.department?.name ? ' - ' + comment.user.department.name : ''}`, 25, nameYPosition + 5);
+
+        // Right side: Date
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(0, 0, 0);
+        const dateStr = new Date(comment.createdAt).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        doc.text(dateStr, pageWidth - 40, nameYPosition);
+
+        yPosition = nameYPosition + 15;
+      }
+
+      yPosition += 5;
     }
 
     // Footer

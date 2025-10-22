@@ -17,6 +17,7 @@ export async function GET(
             lastName: true,
             email: true,
             role: true,
+            signaturePath: true,
             department: {
               select: {
                 name: true,
@@ -98,6 +99,7 @@ export async function POST(
             lastName: true,
             email: true,
             role: true,
+            signaturePath: true,
             department: {
               select: {
                 name: true,
