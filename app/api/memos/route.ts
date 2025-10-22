@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { Prisma, MemoType, MemoStatus } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,11 +19,11 @@ export async function GET(request: NextRequest) {
     }
 
     if (type && type !== 'All') {
-      where.type = type;
+      where.type = type as MemoType;
     }
 
     if (status && status !== 'All') {
-      where.status = status;
+      where.status = status as MemoStatus;
     }
 
     const memos = await prisma.memo.findMany({
