@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { readFile } from 'fs/promises';
 import path from 'path';
-
-// Extend jsPDF type to include autoTable
-interface jsPDFWithAutoTable extends jsPDF {
-  lastAutoTable: {
-    finalY: number;
-  };
-}
 
 // GET /api/memos/[id]/pdf - Generate PDF for a memo
 export async function GET(
@@ -221,51 +213,6 @@ export async function GET(
 
     doc.text(bodyLines, leftMargin, yPosition);
     yPosition += bodyLines.length * 5 + 10;
-
-    // Approvals Section
-    if (memo.approvals.length > 0) {
-      // Check if we need a new page
-      if (yPosition + 50 > doc.internal.pageSize.height - 40) {
-        doc.addPage();
-        yPosition = 20;
-      }
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('APPROVAL WORKFLOW', 20, yPosition);
-      yPosition += 10;
-
-      // Create approval table
-      const approvalData = memo.approvals.map((approval, index) => [
-        (index + 1).toString(),
-        `${approval.approver.firstName} ${approval.approver.lastName}`,
-        approval.approver.role,
-        approval.approver.department?.name || 'N/A',
-        approval.status,
-        approval.approvedAt ? new Date(approval.approvedAt).toLocaleDateString() : '-',
-        approval.comments || '-',
-      ]);
-
-      autoTable(doc, {
-        startY: yPosition,
-        head: [['#', 'Approver', 'Role', 'Department', 'Status', 'Date', 'Comments']],
-        body: approvalData,
-        theme: 'grid',
-        headStyles: { fillColor: [22, 163, 74] as [number, number, number], textColor: 255, fontStyle: 'bold' },
-        styles: { fontSize: 9, cellPadding: 3 },
-        columnStyles: {
-          0: { cellWidth: 10 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 25 },
-          4: { cellWidth: 25 },
-          5: { cellWidth: 25 },
-          6: { cellWidth: 45 },
-        },
-      });
-
-      yPosition = (doc as jsPDFWithAutoTable).lastAutoTable.finalY + 15;
-    }
 
     // Comments/Minutes Section
     if (memo.comments.length > 0) {
