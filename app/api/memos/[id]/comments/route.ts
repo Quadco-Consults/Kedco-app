@@ -4,11 +4,12 @@ import { prisma } from '@/lib/db';
 // GET /api/memos/[id]/comments - Get all comments for a memo
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const comments = await prisma.memoComment.findMany({
-      where: { memoId: params.id },
+      where: { memoId: id },
       include: {
         user: {
           select: {
@@ -43,13 +44,14 @@ export async function GET(
 // POST /api/memos/[id]/comments - Add a comment to a memo
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { userId, comment } = body;
 
-    console.log('Received comment request:', { memoId: params.id, userId, comment: comment?.substring(0, 50) });
+    console.log('Received comment request:', { memoId: id, userId, comment: comment?.substring(0, 50) });
 
     if (!userId || !comment) {
       console.error('Validation failed:', { userId: !!userId, comment: !!comment });
@@ -74,11 +76,11 @@ export async function POST(
 
     // Verify memo exists
     const memoExists = await prisma.memo.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!memoExists) {
-      console.error('Memo not found:', params.id);
+      console.error('Memo not found:', id);
       return NextResponse.json(
         { error: 'Memo not found' },
         { status: 404 }
@@ -87,7 +89,7 @@ export async function POST(
 
     const newComment = await prisma.memoComment.create({
       data: {
-        memoId: params.id,
+        memoId: id,
         userId,
         comment,
       },
