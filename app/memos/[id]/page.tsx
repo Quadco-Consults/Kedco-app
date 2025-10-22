@@ -57,6 +57,7 @@ interface Recipient {
     lastName: string;
     email: string;
     role: string;
+    department?: { name: string } | null;
   };
 }
 
@@ -67,7 +68,9 @@ interface Memo {
   referenceNumber: string;
   status: string;
   type: string;
+  priority: string;
   createdAt: string;
+  approvedAt?: string;
   createdBy: {
     id: string;
     firstName: string;
