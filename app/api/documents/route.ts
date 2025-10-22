@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { Prisma, DocumentStatus } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (status && status !== 'All') {
-      where.status = status;
+      where.status = status as DocumentStatus;
     }
 
     const documents = await prisma.document.findMany({
