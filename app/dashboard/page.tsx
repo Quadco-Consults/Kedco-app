@@ -29,6 +29,7 @@ interface DashboardStats {
     sender: string;
     status: string;
     date: string;
+    priority: string;
   }>;
 }
 
