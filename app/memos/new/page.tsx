@@ -135,8 +135,8 @@ export default function NewMemoPage() {
 
       // Filter users by selected departments and get their IDs
       const recipientIds = allUsers
-        .filter((u: any) => selectedDepartments.includes(u.department))
-        .map((u: any) => u.id);
+        .filter((u: User) => u.department && selectedDepartments.includes(u.department.name))
+        .map((u: User) => u.id);
 
       // Create the memo
       const memoData = {
