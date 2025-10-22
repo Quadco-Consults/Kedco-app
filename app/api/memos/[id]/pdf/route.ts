@@ -15,12 +15,13 @@ interface jsPDFWithAutoTable extends jsPDF {
 // GET /api/memos/[id]/pdf - Generate PDF for a memo
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Fetch memo with all related data
     const memo = await prisma.memo.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         createdBy: {
           select: {
