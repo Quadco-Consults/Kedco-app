@@ -344,8 +344,20 @@ export async function GET(
         const signatureX = columnX + leftSectionWidth + commentSectionWidth;
         if (comment.user.signaturePath) {
           try {
-            const signaturePath = path.join(process.cwd(), 'public', comment.user.signaturePath);
-            const signatureBuffer = await readFile(signaturePath);
+            let signatureBuffer: Buffer;
+
+            // Check if signature is a URL (Vercel Blob) or local path
+            if (comment.user.signaturePath.startsWith('http')) {
+              // Fetch from URL (Vercel Blob Storage)
+              const response = await fetch(comment.user.signaturePath);
+              const arrayBuffer = await response.arrayBuffer();
+              signatureBuffer = Buffer.from(arrayBuffer);
+            } else {
+              // Read from local filesystem (legacy)
+              const signaturePath = path.join(process.cwd(), 'public', comment.user.signaturePath);
+              signatureBuffer = await readFile(signaturePath);
+            }
+
             const signatureBase64 = signatureBuffer.toString('base64');
             const signatureExt = comment.user.signaturePath.split('.').pop()?.toLowerCase();
 
