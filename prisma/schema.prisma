@@ -32,6 +32,8 @@ model User {
   documentMovements   DocumentMovement[]
   memoRecipients      MemoRecipient[]
   documentComments    DocumentComment[]
+  memoApprovals       MemoApproval[]
+  memoComments        MemoComment[]
 
   @@map("users")
 }
@@ -127,6 +129,8 @@ model Memo {
   updatedAt         DateTime        @updatedAt
 
   recipients        MemoRecipient[]
+  approvals         MemoApproval[]
+  comments          MemoComment[]
 
   @@map("memos")
 }
@@ -143,6 +147,37 @@ model MemoRecipient {
 
   @@unique([memoId, userId])
   @@map("memo_recipients")
+}
+
+// Memo Approval model (tracks approval workflow)
+model MemoApproval {
+  id          String          @id @default(uuid())
+  memoId      String
+  memo        Memo            @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  approverId  String
+  approver    User            @relation(fields: [approverId], references: [id])
+  status      ApprovalStatus  @default(PENDING)
+  comments    String?
+  order       Int             // Approval order (1, 2, 3, etc.)
+  approvedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("memo_approvals")
+}
+
+// Memo Comment model
+model MemoComment {
+  id          String     @id @default(uuid())
+  memoId      String
+  memo        Memo       @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  comment     String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("memo_comments")
 }
 
 // Enums
@@ -184,4 +219,11 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SKIPPED
 }

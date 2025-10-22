@@ -10,8 +10,30 @@ import {
   CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
+interface DashboardStats {
+  totalDocuments: number;
+  pendingMemos: number;
+  inTransitDocuments: number;
+  completedToday: number;
+  recentDocuments: Array<{
+    id: string;
+    title: string;
+    department: string;
+    status: string;
+    date: string;
+  }>;
+  recentMemos: Array<{
+    id: string;
+    subject: string;
+    type: string;
+    sender: string;
+    status: string;
+    date: string;
+  }>;
+}
+
 export default function DashboardPage() {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -114,7 +136,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-gray-900">Recent Documents</h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {stats?.recentDocuments.map((doc: any) => (
+              {stats?.recentDocuments.map((doc) => (
                 <div key={doc.id} className="px-6 py-4 hover:bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -150,7 +172,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-semibold text-gray-900">Recent Memos</h2>
             </div>
             <div className="divide-y divide-gray-200">
-              {stats?.recentMemos.map((memo: any) => (
+              {stats?.recentMemos.map((memo) => (
                 <div key={memo.id} className="px-6 py-4 hover:bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
