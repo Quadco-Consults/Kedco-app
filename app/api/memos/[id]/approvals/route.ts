@@ -4,11 +4,12 @@ import { prisma } from '@/lib/db';
 // GET /api/memos/[id]/approvals - Get all approvals for a memo
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const approvals = await prisma.memoApproval.findMany({
-      where: { memoId: params.id },
+      where: { memoId: id },
       include: {
         approver: {
           select: {
@@ -42,9 +43,10 @@ export async function GET(
 // POST /api/memos/[id]/approvals - Add approvers to a memo
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { approvers } = body; // Array of { userId: string, order: number }
 
@@ -59,7 +61,7 @@ export async function POST(
     const approvalPromises = approvers.map((approver: { userId: string; order: number }) =>
       prisma.memoApproval.create({
         data: {
-          memoId: params.id,
+          memoId: id,
           approverId: approver.userId,
           order: approver.order,
           status: 'PENDING',
@@ -71,7 +73,7 @@ export async function POST(
 
     // Update memo status to PENDING_APPROVAL
     await prisma.memo.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'PENDING_APPROVAL' },
     });
 
