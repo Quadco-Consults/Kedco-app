@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Link from 'next/link';
-import { ArrowLeftIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, PaperClipIcon, XMarkIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewMemoPage() {
@@ -18,6 +18,9 @@ export default function NewMemoPage() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const departments = [
     'MD Office',
@@ -30,10 +33,55 @@ export default function NewMemoPage() {
     'Marketing',
   ];
 
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const response = await fetch('/api/users');
+      if (response.ok) {
+        const users = await response.json();
+        // Filter users who are department heads or MD
+        const approverUsers = users.filter(
+          (u: any) => u.role === 'MD' || u.role === 'DEPARTMENT_HEAD' || u.role === 'ADMIN'
+        );
+        setAvailableUsers(approverUsers);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   const handleDepartmentToggle = (dept: string) => {
     setSelectedDepartments((prev) =>
       prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]
     );
+  };
+
+  const handleApproverToggle = (userId: string) => {
+    setSelectedApprovers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const moveApproverUp = (index: number) => {
+    if (index > 0) {
+      const newApprovers = [...selectedApprovers];
+      [newApprovers[index - 1], newApprovers[index]] = [newApprovers[index], newApprovers[index - 1]];
+      setSelectedApprovers(newApprovers);
+    }
+  };
+
+  const moveApproverDown = (index: number) => {
+    if (index < selectedApprovers.length - 1) {
+      const newApprovers = [...selectedApprovers];
+      [newApprovers[index], newApprovers[index + 1]] = [newApprovers[index + 1], newApprovers[index]];
+      setSelectedApprovers(newApprovers);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,9 +151,24 @@ export default function NewMemoPage() {
 
       const createdMemo = await response.json();
 
-      // If action is submit, we could update the status here
-      // For now, redirect to the memos list
-      router.push('/memos');
+      // If approvers are selected, add them to the memo
+      if (selectedApprovers.length > 0) {
+        const approversData = selectedApprovers.map((userId, index) => ({
+          userId,
+          order: index + 1,
+        }));
+
+        await fetch(`/api/memos/${createdMemo.id}/approvals`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ approvers: approversData }),
+        });
+      }
+
+      // Redirect to the created memo detail page
+      router.push(`/memos/${createdMemo.id}`);
     } catch (err) {
       console.error('Error creating memo:', err);
       setError(err instanceof Error ? err.message : 'Failed to create memo');
@@ -273,6 +336,115 @@ export default function NewMemoPage() {
                 </div>
               )}
             </div>
+
+            {/* Approvers (for approval and external letter memos) */}
+            {(memoType === 'APPROVAL' || memoType === 'EXTERNAL_LETTER') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <UserPlusIcon className="h-5 w-5" />
+                    Approvers {memoType === 'APPROVAL' && '*'}
+                  </div>
+                </label>
+                <p className="mt-1 text-xs text-gray-500">
+                  Select approvers in order of approval. The first person will approve first, then the second, and so on.
+                </p>
+
+                {loadingUsers ? (
+                  <div className="mt-2 text-sm text-gray-500">Loading approvers...</div>
+                ) : (
+                  <div className="mt-2 space-y-3">
+                    {/* Available Approvers */}
+                    <div className="rounded-lg border border-gray-300 p-4">
+                      <h4 className="mb-2 text-sm font-medium text-gray-700">Available Approvers</h4>
+                      <div className="space-y-2">
+                        {availableUsers
+                          .filter((u) => !selectedApprovers.includes(u.id))
+                          .map((user) => (
+                            <label key={user.id} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 hover:bg-gray-100">
+                              <input
+                                type="checkbox"
+                                checked={selectedApprovers.includes(user.id)}
+                                onChange={() => handleApproverToggle(user.id)}
+                                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                              />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {user.firstName} {user.lastName}
+                                </p>
+                                <p className="text-xs text-gray-600">
+                                  {user.role} - {user.department || 'N/A'}
+                                </p>
+                              </div>
+                            </label>
+                          ))}
+                      </div>
+                      {availableUsers.filter((u) => !selectedApprovers.includes(u.id)).length === 0 && (
+                        <p className="text-sm text-gray-500">All approvers have been selected</p>
+                      )}
+                    </div>
+
+                    {/* Selected Approvers (Ordered) */}
+                    {selectedApprovers.length > 0 && (
+                      <div className="rounded-lg border border-green-300 bg-green-50 p-4">
+                        <h4 className="mb-2 text-sm font-medium text-green-900">
+                          Selected Approvers (in order)
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedApprovers.map((userId, index) => {
+                            const user = availableUsers.find((u) => u.id === userId);
+                            if (!user) return null;
+                            return (
+                              <div
+                                key={userId}
+                                className="flex items-center gap-2 rounded-lg border border-green-200 bg-white p-3"
+                              >
+                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
+                                  {index + 1}
+                                </span>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">
+                                    {user.firstName} {user.lastName}
+                                  </p>
+                                  <p className="text-xs text-gray-600">
+                                    {user.role} - {user.department || 'N/A'}
+                                  </p>
+                                </div>
+                                <div className="flex gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveApproverUp(index)}
+                                    disabled={index === 0}
+                                    className="rounded p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveApproverDown(index)}
+                                    disabled={index === selectedApprovers.length - 1}
+                                    className="rounded p-1 text-gray-600 hover:bg-gray-100 disabled:opacity-30"
+                                  >
+                                    ↓
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApproverToggle(userId)}
+                                    className="rounded p-1 text-red-600 hover:bg-red-50"
+                                  >
+                                    <XMarkIcon className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Due Date (for approval memos) */}
             {memoType === 'APPROVAL' && (
