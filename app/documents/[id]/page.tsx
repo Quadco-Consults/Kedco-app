@@ -14,16 +14,64 @@ import {
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 
+interface DocumentComment {
+  id: string;
+  comment: string;
+  createdAt: string;
+  user: {
+    firstName: string;
+    lastName: string;
+    role: string;
+  };
+}
+
+interface DocumentMovement {
+  id: string;
+  action: string;
+  movedAt: string;
+  notes?: string;
+  movedBy: {
+    firstName: string;
+    lastName: string;
+  };
+}
+
+interface DocumentDetail {
+  id: string;
+  title: string;
+  referenceNumber: string;
+  status: string;
+  type?: string;
+  createdBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  currentDepartment?: {
+    id: string;
+    name: string;
+  };
+  comments?: DocumentComment[];
+  movements?: DocumentMovement[];
+}
+
+interface Recipient {
+  id: string;
+  name?: string;
+  email?: string;
+}
+
 export default function DocumentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [document, setDocument] = useState<any>(null);
+  const [document, setDocument] = useState<DocumentDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [transferNotes, setTransferNotes] = useState('');
   const [recipientComment, setRecipientComment] = useState('');
   const [showCommentModal, setShowCommentModal] = useState(false);
-  const [selectedRecipient, setSelectedRecipient] = useState<any>(null);
+  const [selectedRecipient, setSelectedRecipient] = useState<Recipient | null>(null);
 
   useEffect(() => {
     fetchDocument();
@@ -242,7 +290,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
               <div className="rounded-lg bg-white p-6 shadow">
                 <h3 className="mb-4 text-lg font-semibold text-gray-900">Comments & Reviews</h3>
                 <div className="space-y-4">
-                  {document.comments.map((comment: any) => (
+                  {document.comments.map((comment) => (
                     <div key={comment.id} className="border-l-4 border-green-500 bg-green-50 p-4">
                       <div className="mb-2 flex items-start justify-between">
                         <div>
@@ -268,7 +316,7 @@ export default function DocumentDetailPage({ params }: { params: Promise<{ id: s
                 <h3 className="mb-4 text-lg font-semibold text-gray-900">Movement History</h3>
                 <div className="relative">
                   <div className="space-y-6">
-                    {document.movements.map((movement: any, index: number) => (
+                    {document.movements.map((movement, index) => (
                       <div key={movement.id} className="relative flex gap-4">
                         {index !== document.movements.length - 1 && (
                           <div className="absolute left-4 top-8 h-full w-0.5 bg-gray-200" />

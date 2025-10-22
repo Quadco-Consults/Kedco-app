@@ -47,10 +47,45 @@ interface Comment {
   };
 }
 
+interface Recipient {
+  id: string;
+  hasRead: boolean;
+  readAt: string | null;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+  };
+}
+
+interface Memo {
+  id: string;
+  subject: string;
+  body: string;
+  referenceNumber: string;
+  status: string;
+  type: string;
+  createdAt: string;
+  createdBy: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: string;
+  };
+  department?: {
+    id: string;
+    name: string;
+  };
+  recipients?: Recipient[];
+}
+
 export default function MemoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user } = useAuth();
-  const [memo, setMemo] = useState<any>(null);
+  const [memo, setMemo] = useState<Memo | null>(null);
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -516,7 +551,7 @@ export default function MemoDetailPage({ params }: { params: Promise<{ id: strin
               <div className="rounded-lg bg-white p-6 shadow">
                 <h3 className="mb-4 text-lg font-semibold text-gray-900">Recipients</h3>
                 <div className="space-y-3">
-                  {memo.recipients.map((recipient: any) => (
+                  {memo.recipients.map((recipient) => (
                     <div
                       key={recipient.id}
                       className={`rounded-lg border-2 p-4 ${
@@ -569,13 +604,13 @@ export default function MemoDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Read</span>
                   <span className="font-medium text-gray-900">
-                    {memo.recipients?.filter((r: any) => r.hasRead).length || 0}
+                    {memo.recipients?.filter((r) => r.hasRead).length || 0}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Unread</span>
                   <span className="font-medium text-gray-900">
-                    {memo.recipients?.filter((r: any) => !r.hasRead).length || 0}
+                    {memo.recipients?.filter((r) => !r.hasRead).length || 0}
                   </span>
                 </div>
                 {approvals.length > 0 && (

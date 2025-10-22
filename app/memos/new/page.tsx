@@ -7,6 +7,18 @@ import Link from 'next/link';
 import { ArrowLeftIcon, PaperClipIcon, XMarkIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  department?: {
+    id: string;
+    name: string;
+  };
+}
+
 export default function NewMemoPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -18,7 +30,7 @@ export default function NewMemoPage() {
   const [attachments, setAttachments] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [selectedApprovers, setSelectedApprovers] = useState<string[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
@@ -42,10 +54,10 @@ export default function NewMemoPage() {
       setLoadingUsers(true);
       const response = await fetch('/api/users');
       if (response.ok) {
-        const users = await response.json();
+        const users: User[] = await response.json();
         // Filter users who are department heads or MD
         const approverUsers = users.filter(
-          (u: any) => u.role === 'MD' || u.role === 'DEPARTMENT_HEAD' || u.role === 'ADMIN'
+          (u) => u.role === 'MD' || u.role === 'DEPARTMENT_HEAD' || u.role === 'ADMIN'
         );
         setAvailableUsers(approverUsers);
       }

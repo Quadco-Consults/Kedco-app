@@ -78,6 +78,7 @@ export async function GET(
                 firstName: true,
                 lastName: true,
                 email: true,
+                role: true,
                 department: {
                   select: {
                     name: true,
@@ -100,115 +101,119 @@ export async function GET(
     // Create PDF
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
-    let yPosition = 20;
+    const pageHeight = doc.internal.pageSize.height;
+    let yPosition = 25;
 
-    // Header - Company Name
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Kaduna Electric Distribution Company', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 10;
+    // KEDCO Brand Colors (Green theme)
+    const brandGreen = [22, 163, 74]; // green-600
+    const brandGreenLight = [220, 252, 231]; // green-100
+    const brandGreenDark = [21, 128, 61]; // green-700
 
+    // Add KEDCO Logo on the left
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'KEDCO.jpg');
+      const logoBuffer = await readFile(logoPath);
+      const logoBase64 = logoBuffer.toString('base64');
+
+      const logoWidth = 25;
+      const logoHeight = 25;
+      doc.addImage(
+        `data:image/jpeg;base64,${logoBase64}`,
+        'JPEG',
+        20,
+        15,
+        logoWidth,
+        logoHeight
+      );
+    } catch (error) {
+      console.error('Error adding logo to PDF:', error);
+    }
+
+    // Company name centered at top
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text('KEDCO', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
-
-    // Memo Header
-    doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('MEMORANDUM', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 15;
+    doc.setTextColor(0, 0, 0);
+    doc.text('KANO ELECTRICITY DISTRIBUTION COMPANY', pageWidth / 2, 20, { align: 'center' });
 
-    // Reference Number and Type
+    // "INTERNAL MEMO" centered below with underline
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INTERNAL MEMO', pageWidth / 2, 28, { align: 'center' });
+
+    // Underline for "INTERNAL MEMO"
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    const memoTextWidth = doc.getTextWidth('INTERNAL MEMO');
+    doc.line((pageWidth - memoTextWidth) / 2, 29, (pageWidth + memoTextWidth) / 2, 29);
+
+    yPosition = 45;
+
+    // Date on the right
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Reference: ${memo.referenceNumber}`, 20, yPosition);
-    doc.text(`Type: ${memo.type.replace(/_/g, ' ')}`, pageWidth - 70, yPosition);
+    doc.text(`Date: ${new Date(memo.createdAt).toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })}`, pageWidth - 20, yPosition, { align: 'right' });
+
     yPosition += 10;
 
-    // Priority Badge
-    const priorityColors: Record<string, [number, number, number]> = {
-      URGENT: [220, 38, 38],
-      HIGH: [234, 179, 8],
-      MEDIUM: [59, 130, 246],
-      LOW: [156, 163, 175],
-    };
-    const priorityColor = priorityColors[memo.priority] || [156, 163, 175];
-    doc.setFillColor(...priorityColor);
-    doc.roundedRect(20, yPosition - 3, 25, 6, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.text(memo.priority, 32.5, yPosition + 1, { align: 'center' });
-    doc.setTextColor(0, 0, 0);
-    yPosition += 10;
+    // Simple field layout
+    const leftMargin = 20;
+    const labelWidth = 20;
+    doc.setFontSize(10);
 
-    // Status
-    doc.text(`Status: ${memo.status.replace(/_/g, ' ')}`, 20, yPosition);
-    yPosition += 10;
-
-    // Separator line
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, yPosition, pageWidth - 20, yPosition);
-    yPosition += 10;
-
-    // From/To Section
+    // TO section
     doc.setFont('helvetica', 'bold');
-    doc.text('FROM:', 20, yPosition);
+    doc.text('To:', leftMargin, yPosition);
+    doc.setFont('helvetica', 'normal');
+    const toText = memo.recipients.map(r =>
+      `${r.user.firstName} ${r.user.lastName} (${r.user.role})`
+    ).join(', ');
+    const toLines = doc.splitTextToSize(toText, pageWidth - 50);
+    doc.text(toLines, leftMargin + labelWidth, yPosition);
+    yPosition += Math.max(toLines.length * 5, 8);
+
+    // FROM section
+    doc.setFont('helvetica', 'bold');
+    doc.text('From:', leftMargin, yPosition);
     doc.setFont('helvetica', 'normal');
     doc.text(
-      `${memo.createdBy.firstName} ${memo.createdBy.lastName} (${memo.createdBy.department?.name || 'N/A'})`,
-      45,
+      `${memo.createdBy.firstName} ${memo.createdBy.lastName} (${memo.createdBy.role})`,
+      leftMargin + labelWidth,
       yPosition
     );
     yPosition += 8;
 
+    // Subject with underline
     doc.setFont('helvetica', 'bold');
-    doc.text('DATE:', 20, yPosition);
-    doc.setFont('helvetica', 'normal');
-    doc.text(new Date(memo.createdAt).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    }), 45, yPosition);
-    yPosition += 8;
-
+    doc.text('Subject:', leftMargin, yPosition);
     doc.setFont('helvetica', 'bold');
-    doc.text('TO:', 20, yPosition);
-    doc.setFont('helvetica', 'normal');
-    const recipients = memo.recipients.map(r =>
-      `${r.user.firstName} ${r.user.lastName} (${r.user.department?.name || 'N/A'})`
-    ).join(', ');
-    const recipientLines = doc.splitTextToSize(recipients, pageWidth - 65);
-    doc.text(recipientLines, 45, yPosition);
-    yPosition += recipientLines.length * 6 + 8;
+    const subjectText = memo.subject.toUpperCase();
+    const subjectLines = doc.splitTextToSize(subjectText, pageWidth - 50);
+    doc.text(subjectLines, leftMargin + labelWidth, yPosition);
+    yPosition += Math.max(subjectLines.length * 5, 5);
 
-    // Separator line
-    doc.line(20, yPosition, pageWidth - 20, yPosition);
+    // Underline under subject
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.line(leftMargin, yPosition, pageWidth - 20, yPosition);
     yPosition += 10;
 
-    // Subject
-    doc.setFont('helvetica', 'bold');
-    doc.text('SUBJECT:', 20, yPosition);
-    yPosition += 8;
+    // Body/Message Content
     doc.setFont('helvetica', 'normal');
-    const subjectLines = doc.splitTextToSize(memo.subject, pageWidth - 40);
-    doc.text(subjectLines, 20, yPosition);
-    yPosition += subjectLines.length * 6 + 10;
-
-    // Body
-    doc.setFont('helvetica', 'bold');
-    doc.text('MESSAGE:', 20, yPosition);
-    yPosition += 8;
-    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
     const bodyLines = doc.splitTextToSize(memo.body, pageWidth - 40);
 
     // Check if we need a new page
-    if (yPosition + bodyLines.length * 6 > doc.internal.pageSize.height - 40) {
+    if (yPosition + bodyLines.length * 5 > doc.internal.pageSize.height - 60) {
       doc.addPage();
       yPosition = 20;
     }
 
-    doc.text(bodyLines, 20, yPosition);
-    yPosition += bodyLines.length * 6 + 15;
+    doc.text(bodyLines, leftMargin, yPosition);
+    yPosition += bodyLines.length * 5 + 10;
 
     // Approvals Section
     if (memo.approvals.length > 0) {
@@ -239,7 +244,7 @@ export async function GET(
         head: [['#', 'Approver', 'Role', 'Department', 'Status', 'Date', 'Comments']],
         body: approvalData,
         theme: 'grid',
-        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+        headStyles: { fillColor: [22, 163, 74] as [number, number, number], textColor: 255, fontStyle: 'bold' },
         styles: { fontSize: 9, cellPadding: 3 },
         columnStyles: {
           0: { cellWidth: 10 },
@@ -255,54 +260,82 @@ export async function GET(
       yPosition = (doc as any).lastAutoTable.finalY + 15;
     }
 
-    // Comments/Minutes Section with Signature Style
+    // Comments/Minutes Section
     if (memo.comments.length > 0) {
-      // Check if we need a new page
-      if (yPosition + 50 > doc.internal.pageSize.height - 40) {
-        doc.addPage();
-        yPosition = 20;
-      }
+      // Add some spacing before comments
+      yPosition += 5;
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('COMMENTS/MINUTES', 20, yPosition);
-      yPosition += 15;
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text('COMMENTS/MINUTES', leftMargin, yPosition);
+      yPosition += 8;
 
-      // Display each comment with signature block format
-      for (const comment of memo.comments) {
-        // Check if we need a new page for this comment
-        const estimatedHeight = 50; // Approximate height per comment block
-        if (yPosition + estimatedHeight > doc.internal.pageSize.height - 40) {
-          doc.addPage();
-          yPosition = 20;
-        }
+      // Display comments side by side (2 columns)
+      const displayComments = memo.comments.slice(0, 4); // Show max 4 comments (2x2 grid)
+      const columnWidth = (pageWidth - 40) / 2; // Two columns
+      const column1X = leftMargin;
+      const column2X = leftMargin + columnWidth + 5;
 
-        // Draw a light border box for each comment
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.5);
+      let currentColumn = 0;
+      let startY = yPosition;
+      let maxYInRow = yPosition;
 
-        // Comment content
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
+      for (let i = 0; i < displayComments.length; i++) {
+        const comment = displayComments[i];
+        const columnX = currentColumn === 0 ? column1X : column2X;
+        let commentY = yPosition;
+
+        // Layout: Name & Role | Comment | Signature (all side by side)
+
+        // Left section: Name and Role (20% of column width)
+        const leftSectionWidth = columnWidth * 0.25;
+        const commentSectionWidth = columnWidth * 0.50;
+        const signatureSectionWidth = columnWidth * 0.25;
+
+        // Name (bold, compact)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
         doc.setTextColor(0, 0, 0);
+        const nameText = `${comment.user.firstName} ${comment.user.lastName}`;
+        const nameLines = doc.splitTextToSize(nameText, leftSectionWidth - 2);
+        doc.text(nameLines, columnX, commentY);
 
-        const commentLines = doc.splitTextToSize(comment.comment, pageWidth - 50);
-        const commentHeight = commentLines.length * 5 + 35;
+        // Role below name (compact)
+        const roleY = commentY + nameLines.length * 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        const roleText = comment.user.role.replace(/_/g, ' ');
+        const roleLines = doc.splitTextToSize(roleText, leftSectionWidth - 2);
+        doc.text(roleLines, columnX, roleY);
 
-        // Draw border box
-        doc.rect(20, yPosition - 5, pageWidth - 40, commentHeight);
+        // Date below role
+        const dateY = roleY + roleLines.length * 3.5;
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(6);
+        const dateStr = new Date(comment.createdAt).toLocaleDateString('en-GB', {
+          day: 'numeric',
+          month: 'short',
+          year: '2-digit'
+        });
+        doc.text(dateStr, columnX, dateY);
 
-        // Comment text
-        doc.text(commentLines, 25, yPosition);
-        yPosition += commentLines.length * 5 + 10;
+        // Middle section: Comment text
+        const commentX = columnX + leftSectionWidth;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(50, 50, 50);
 
-        // Draw horizontal line above signature area
-        doc.setDrawColor(100, 100, 100);
-        doc.line(25, yPosition, pageWidth - 25, yPosition);
-        yPosition += 8;
+        let commentText = comment.comment;
+        if (commentText.length > 80) {
+          commentText = commentText.substring(0, 80) + '...';
+        }
+        const commentLines = doc.splitTextToSize(commentText, commentSectionWidth - 2);
+        const displayLines = commentLines.slice(0, 3); // Max 3 lines
+        doc.text(displayLines, commentX, commentY);
 
-        // Try to add signature image if available
-        let signatureAdded = false;
+        // Right section: Signature
+        const signatureX = columnX + leftSectionWidth + commentSectionWidth;
         if (comment.user.signaturePath) {
           try {
             const signaturePath = path.join(process.cwd(), 'public', comment.user.signaturePath);
@@ -317,61 +350,65 @@ export async function GET(
               imageType = 'SVG';
             }
 
-            // Add signature image (small size, positioned above name)
-            const signatureWidth = 30;
-            const signatureHeight = 15;
+            const signatureWidth = signatureSectionWidth - 2;
+            const signatureHeight = 10;
+
             doc.addImage(
               `data:image/${signatureExt};base64,${signatureBase64}`,
               imageType,
-              25,
-              yPosition - 3,
+              signatureX,
+              commentY - 2,
               signatureWidth,
               signatureHeight
             );
-            signatureAdded = true;
           } catch (error) {
             console.error('Error adding signature to PDF:', error);
-            // Continue without signature if there's an error
           }
         }
 
-        // Left side: Name and Role (positioned below signature if present)
-        const nameYPosition = signatureAdded ? yPosition + 13 : yPosition;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.text(`${comment.user.firstName} ${comment.user.lastName}`, 25, nameYPosition);
+        // Calculate height for this comment block
+        const blockHeight = Math.max(
+          dateY - commentY + 4, // Height of left section
+          displayLines.length * 4, // Height of comment
+          12 // Minimum height for signature
+        );
 
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(80, 80, 80);
-        doc.text(`${comment.user.role}${comment.user.department?.name ? ' - ' + comment.user.department.name : ''}`, 25, nameYPosition + 5);
+        commentY += blockHeight + 8; // Add spacing between comments
+        maxYInRow = Math.max(maxYInRow, commentY);
 
-        // Right side: Date
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(0, 0, 0);
-        const dateStr = new Date(comment.createdAt).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-        doc.text(dateStr, pageWidth - 40, nameYPosition);
-
-        yPosition = nameYPosition + 15;
+        // Move to next column or next row
+        if (currentColumn === 0) {
+          currentColumn = 1;
+        } else {
+          currentColumn = 0;
+          yPosition = maxYInRow; // Move to next row
+          maxYInRow = yPosition;
+        }
       }
 
-      yPosition += 5;
+      // Adjust yPosition if we ended on first column
+      if (currentColumn === 1) {
+        yPosition = maxYInRow;
+      }
+
+      // If there are more comments, add indicator
+      if (memo.comments.length > 4) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`+ ${memo.comments.length - 4} more comment(s)...`, leftMargin, yPosition + 2);
+      }
     }
 
-    // Footer
+    // Footer with page number
     const totalPages = doc.internal.pages.length - 1;
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      doc.setFontSize(8);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(128, 128, 128);
+      doc.setTextColor(0, 0, 0);
       doc.text(
-        `Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} | Page ${i} of ${totalPages}`,
+        `${i}`,
         pageWidth / 2,
         doc.internal.pageSize.height - 10,
         { align: 'center' }

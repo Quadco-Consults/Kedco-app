@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import * as bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role');
     const status = searchParams.get('status');
 
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {};
 
     if (search) {
       where.OR = [
