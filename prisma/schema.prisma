@@ -17,6 +17,8 @@ model User {
   password       String
   firstName      String
   lastName       String
+  phone          String?
+  signaturePath  String?
   role           Role             @default(STAFF)
   departmentId   String?
   department     Department?      @relation(fields: [departmentId], references: [id])

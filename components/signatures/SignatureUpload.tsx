@@ -6,11 +6,15 @@ import { PencilIcon, ArrowUpTrayIcon, XMarkIcon, CheckIcon } from '@heroicons/re
 interface SignatureUploadProps {
   currentSignature?: string;
   onSignatureUpdate?: (signature: string) => void;
+  onFileUpload?: (file: File) => void;
+  onRemove?: () => void;
 }
 
 export default function SignatureUpload({
   currentSignature,
   onSignatureUpdate,
+  onFileUpload,
+  onRemove,
 }: SignatureUploadProps) {
   const [mode, setMode] = useState<'upload' | 'draw'>('upload');
   const [signature, setSignature] = useState<string | null>(currentSignature || null);
@@ -91,6 +95,13 @@ export default function SignatureUpload({
       return;
     }
 
+    // If onFileUpload callback is provided, use it (for server upload)
+    if (onFileUpload) {
+      onFileUpload(file);
+      return;
+    }
+
+    // Otherwise, use data URL (legacy behavior)
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
@@ -190,7 +201,13 @@ export default function SignatureUpload({
           <div className="mb-2 flex items-center justify-between">
             <p className="text-sm font-medium text-gray-700">Current Signature</p>
             <button
-              onClick={() => setSignature(null)}
+              onClick={() => {
+                if (onRemove) {
+                  onRemove();
+                } else {
+                  setSignature(null);
+                }
+              }}
               className="text-sm text-red-600 hover:text-red-700"
             >
               Remove

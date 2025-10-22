@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Link from 'next/link';
 import {
@@ -13,63 +13,18 @@ import {
   XCircleIcon,
 } from '@heroicons/react/24/outline';
 
-const mockUsers = [
-  {
-    id: '1',
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@kedco.com',
-    department: 'Finance',
-    role: 'DEPARTMENT_HEAD',
-    isActive: true,
-    createdAt: '2025-01-15',
-    lastLogin: '2 hours ago',
-  },
-  {
-    id: '2',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    email: 'jane.smith@kedco.com',
-    department: 'Human Resources',
-    role: 'DEPARTMENT_HEAD',
-    isActive: true,
-    createdAt: '2025-01-10',
-    lastLogin: '1 day ago',
-  },
-  {
-    id: '3',
-    firstName: 'Michael',
-    lastName: 'Johnson',
-    email: 'michael.j@kedco.com',
-    department: 'Operations',
-    role: 'STAFF',
-    isActive: true,
-    createdAt: '2025-02-01',
-    lastLogin: '5 hours ago',
-  },
-  {
-    id: '4',
-    firstName: 'Sarah',
-    lastName: 'Williams',
-    email: 'sarah.w@kedco.com',
-    department: 'Internal Audit',
-    role: 'AUDITOR',
-    isActive: true,
-    createdAt: '2025-01-20',
-    lastLogin: '30 minutes ago',
-  },
-  {
-    id: '5',
-    firstName: 'David',
-    lastName: 'Brown',
-    email: 'david.b@kedco.com',
-    department: 'IT',
-    role: 'ADMIN',
-    isActive: false,
-    createdAt: '2024-12-15',
-    lastLogin: '2 weeks ago',
-  },
-];
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  departmentId: string | null;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin: string;
+}
 
 const roleLabels = {
   MD: 'Managing Director',
@@ -80,21 +35,42 @@ const roleLabels = {
 };
 
 const roleColors = {
-  MD: 'bg-purple-100 text-purple-800',
-  DEPARTMENT_HEAD: 'bg-green-100 text-green-800',
-  STAFF: 'bg-gray-100 text-gray-800',
-  ADMIN: 'bg-green-100 text-green-800',
-  AUDITOR: 'bg-orange-100 text-orange-800',
+  MD: 'bg-purple-100 text-gray-900',
+  DEPARTMENT_HEAD: 'bg-green-100 text-gray-900',
+  STAFF: 'bg-gray-100 text-gray-900',
+  ADMIN: 'bg-blue-100 text-gray-900',
+  AUDITOR: 'bg-orange-100 text-gray-900',
 };
 
 export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
-  const filteredUsers = mockUsers.filter((user) => {
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/users');
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -112,10 +88,24 @@ export default function UsersPage() {
     setShowDeleteModal(true);
   };
 
-  const confirmDelete = () => {
-    console.log('Deleting user:', selectedUser);
-    setShowDeleteModal(false);
-    setSelectedUser(null);
+  const confirmDelete = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const response = await fetch(`/api/users/${selectedUser}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Refresh users list
+        await fetchUsers();
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+    } finally {
+      setShowDeleteModal(false);
+      setSelectedUser(null);
+    }
   };
 
   return (
@@ -201,7 +191,13 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredUsers.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
+                    Loading users...
+                  </td>
+                </tr>
+              ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-sm text-gray-500">
                     No users found
@@ -288,24 +284,24 @@ export default function UsersPage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg bg-white p-6 shadow">
             <p className="text-sm font-medium text-gray-600">Total Users</p>
-            <p className="mt-2 text-3xl font-semibold text-gray-900">{mockUsers.length}</p>
+            <p className="mt-2 text-3xl font-semibold text-gray-900">{users.length}</p>
           </div>
           <div className="rounded-lg bg-white p-6 shadow">
             <p className="text-sm font-medium text-gray-600">Active Users</p>
             <p className="mt-2 text-3xl font-semibold text-green-600">
-              {mockUsers.filter((u) => u.isActive).length}
+              {users.filter((u) => u.isActive).length}
             </p>
           </div>
           <div className="rounded-lg bg-white p-6 shadow">
             <p className="text-sm font-medium text-gray-600">Department Heads</p>
             <p className="mt-2 text-3xl font-semibold text-green-600">
-              {mockUsers.filter((u) => u.role === 'DEPARTMENT_HEAD').length}
+              {users.filter((u) => u.role === 'DEPARTMENT_HEAD').length}
             </p>
           </div>
           <div className="rounded-lg bg-white p-6 shadow">
             <p className="text-sm font-medium text-gray-600">Administrators</p>
             <p className="mt-2 text-3xl font-semibold text-purple-600">
-              {mockUsers.filter((u) => u.role === 'ADMIN').length}
+              {users.filter((u) => u.role === 'ADMIN').length}
             </p>
           </div>
         </div>
