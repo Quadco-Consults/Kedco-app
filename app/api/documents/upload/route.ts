@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
 import { Priority, DocumentStatus } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
@@ -22,25 +21,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
-    try {
-      await mkdir(uploadsDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist, ignore error
-    }
-
     // Generate unique filename
     const timestamp = Date.now();
     const originalName = file.name;
-    const extension = path.extname(originalName);
-    const filename = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const filePath = path.join(uploadsDir, filename);
+    const filename = `documents/${timestamp}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-    // Convert File to Buffer and save
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    // Upload to Vercel Blob Storage
+    const blob = await put(filename, file, {
+      access: 'public',
+      addRandomSuffix: false,
+    });
 
     // Generate reference number
     const count = await prisma.document.count();
@@ -55,7 +45,7 @@ export async function POST(request: NextRequest) {
         referenceNumber,
         title,
         description,
-        filePath: `/uploads/documents/${filename}`,
+        filePath: blob.url,
         fileName: originalName,
         fileSize: file.size,
         mimeType: file.type,

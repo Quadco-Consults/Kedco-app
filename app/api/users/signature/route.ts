@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { put } from '@vercel/blob';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,31 +24,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'signatures');
-    try {
-      await mkdir(uploadsDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist
-    }
-
     // Generate unique filename
     const timestamp = Date.now();
     const extension = file.name.split('.').pop();
-    const fileName = `signature_${userId}_${timestamp}.${extension}`;
-    const filePath = path.join(uploadsDir, fileName);
+    const fileName = `signatures/signature_${userId}_${timestamp}.${extension}`;
 
-    // Write file to disk
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    // Upload to Vercel Blob Storage
+    const blob = await put(fileName, file, {
+      access: 'public',
+      addRandomSuffix: false,
+    });
 
     // Update user signature path in database
-    const publicPath = `/uploads/signatures/${fileName}`;
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
-        signaturePath: publicPath,
+        signaturePath: blob.url,
       },
       select: {
         id: true,
