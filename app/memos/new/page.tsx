@@ -1,17 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Link from 'next/link';
 import { ArrowLeftIcon, PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewMemoPage() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [memoType, setMemoType] = useState('APPROVAL');
   const [priority, setPriority] = useState('MEDIUM');
   const [subject, setSubject] = useState('');
   const [content, setContent] = useState('');
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [attachments, setAttachments] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const departments = [
     'MD Office',
@@ -40,17 +46,72 @@ export default function NewMemoPage() {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (action: 'draft' | 'submit') => {
-    console.log('Submitting memo:', {
-      type: memoType,
-      priority,
-      subject,
-      content,
-      departments: selectedDepartments,
-      attachments,
-      action,
-    });
-    // Handle form submission
+  const handleSubmit = async (action: 'draft' | 'submit') => {
+    if (!user) {
+      setError('You must be logged in to create a memo');
+      return;
+    }
+
+    if (!subject.trim() || !content.trim()) {
+      setError('Subject and content are required');
+      return;
+    }
+
+    if (selectedDepartments.length === 0) {
+      setError('Please select at least one recipient department');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError('');
+
+      // First, get users from the selected departments to use as recipients
+      const usersResponse = await fetch('/api/users');
+      if (!usersResponse.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      const allUsers = await usersResponse.json();
+
+      // Filter users by selected departments and get their IDs
+      const recipientIds = allUsers
+        .filter((u: any) => selectedDepartments.includes(u.department))
+        .map((u: any) => u.id);
+
+      // Create the memo
+      const memoData = {
+        subject,
+        memoBody: content,
+        type: memoType,
+        priority,
+        departmentId: user.departmentId || null,
+        createdById: user.id,
+        recipients: recipientIds,
+      };
+
+      const response = await fetch('/api/memos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(memoData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create memo');
+      }
+
+      const createdMemo = await response.json();
+
+      // If action is submit, we could update the status here
+      // For now, redirect to the memos list
+      router.push('/memos');
+    } catch (err) {
+      console.error('Error creating memo:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create memo');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -65,16 +126,23 @@ export default function NewMemoPage() {
           Back to Memos
         </Link>
 
+        {/* Error Message */}
+        {error && (
+          <div className="rounded-lg bg-red-50 p-4">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
         {/* Main Form */}
         <div className="rounded-lg bg-white p-6 shadow">
-          <form className="space-y-6">
+          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
             {/* Memo Type */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Memo Type *</label>
               <select
                 value={memoType}
                 onChange={(e) => setMemoType(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               >
                 <option value="APPROVAL">Approval Request</option>
                 <option value="EXTERNAL_LETTER">External Letter (Requires MD Review)</option>
@@ -121,7 +189,7 @@ export default function NewMemoPage() {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Enter memo subject..."
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
 
@@ -133,7 +201,7 @@ export default function NewMemoPage() {
                 onChange={(e) => setContent(e.target.value)}
                 rows={10}
                 placeholder="Type your memo content here..."
-                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
 
@@ -212,7 +280,7 @@ export default function NewMemoPage() {
                 <label className="block text-sm font-medium text-gray-700">Due Date</label>
                 <input
                   type="date"
-                  className="mt-1 rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
               </div>
             )}
@@ -229,16 +297,18 @@ export default function NewMemoPage() {
                 <button
                   type="button"
                   onClick={() => handleSubmit('draft')}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  disabled={submitting}
+                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Save as Draft
+                  {submitting ? 'Saving...' : 'Save as Draft'}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSubmit('submit')}
-                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                  disabled={submitting}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {memoType === 'APPROVAL' ? 'Submit for Approval' : 'Send Memo'}
+                  {submitting ? 'Sending...' : (memoType === 'APPROVAL' ? 'Submit for Approval' : 'Send Memo')}
                 </button>
               </div>
             </div>

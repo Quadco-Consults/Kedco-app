@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import Link from 'next/link';
 import {
@@ -12,118 +12,100 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 
-// Mock data - replace with API calls
-const mockMemos = {
-  '1': {
-    id: '1',
-    referenceNumber: 'MEM-2025-001',
-    subject: 'Annual General Meeting',
-    type: 'Internal',
-    priority: 'High',
-    status: 'Pending Approval',
-    content: 'This is regarding the Annual General Meeting scheduled for next month...',
-    recipientDepartment: 'All Departments',
-    createdBy: 'MD Office',
-    createdAt: '2025-10-20 10:00 AM',
-    fileName: 'agm_memo.pdf',
-    fileSize: '1.2 MB',
-    fileUrl: null,
-    requiresApproval: false,
-  },
-  '3': {
-    id: '3',
-    referenceNumber: 'MEM-2025-003',
-    subject: 'Budget Approval Request',
-    type: 'Approval',
-    priority: 'High',
-    status: 'Pending Approval',
-    content: 'Requesting approval for FY 2025 budget allocation...',
-    recipientDepartment: 'MD Office',
-    createdBy: 'Finance',
-    createdAt: '2025-10-18 09:30 AM',
-    fileName: 'budget_approval_memo.pdf',
-    fileSize: '1.8 MB',
-    fileUrl: '/sample-memo-approval.html',
-    requiresApproval: true,
-    approver: 'Managing Director',
-  },
-  '4': {
-    id: '4',
-    referenceNumber: 'MEM-2025-004',
-    subject: 'Response to Regulatory Authority',
-    type: 'External Letter',
-    priority: 'Urgent',
-    status: 'Pending Approval',
-    content: 'Response to NERC regarding regulatory compliance...',
-    recipientDepartment: 'MD Office',
-    createdBy: 'Legal',
-    createdAt: '2025-10-21 02:00 PM',
-    fileName: 'nerc_response_letter.pdf',
-    fileSize: '2.1 MB',
-    fileUrl: '/sample-memo-external-letter.html',
-    requiresApproval: true,
-    approver: 'Managing Director',
-  },
-};
-
 export default function MemoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const memo = mockMemos[id as keyof typeof mockMemos] || mockMemos['3'];
-
+  const [memo, setMemo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
   const [approvalComments, setApprovalComments] = useState('');
-  const [memoStatus, setMemoStatus] = useState(memo.status);
+
+  useEffect(() => {
+    fetchMemo();
+  }, [id]);
+
+  const fetchMemo = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/memos/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMemo(data);
+      }
+    } catch (error) {
+      console.error('Error fetching memo:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleApproval = (action: 'approve' | 'reject') => {
     setApprovalAction(action);
     setShowApprovalModal(true);
   };
 
-  const submitApproval = () => {
-    if (approvalAction === 'approve') {
-      setMemoStatus('Approved');
-      console.log('Memo approved with comments:', approvalComments);
-    } else {
-      setMemoStatus('Rejected');
-      console.log('Memo rejected with comments:', approvalComments);
+  const submitApproval = async () => {
+    try {
+      const newStatus = approvalAction === 'approve' ? 'APPROVED' : 'REJECTED';
+
+      const response = await fetch(`/api/memos/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          approvedAt: approvalAction === 'approve' ? new Date().toISOString() : null,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh memo data
+        fetchMemo();
+      }
+    } catch (error) {
+      console.error('Error updating memo:', error);
+    } finally {
+      setShowApprovalModal(false);
+      setApprovalComments('');
+      setApprovalAction(null);
     }
-    setShowApprovalModal(false);
-    setApprovalComments('');
-    setApprovalAction(null);
   };
 
-  const handleViewMemo = () => {
-    if (memo.fileUrl) {
-      window.open(memo.fileUrl, '_blank');
-    }
-  };
+  if (loading) {
+    return (
+      <DashboardLayout title="Loading..." subtitle="Please wait">
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-center">
+            <div className="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-green-600 border-r-transparent"></div>
+            <p className="text-gray-600">Loading memo...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  const handleDownloadMemo = () => {
-    if (memo.fileUrl) {
-      window.open(memo.fileUrl, '_blank');
-    }
-  };
+  if (!memo) {
+    return (
+      <DashboardLayout title="Not Found" subtitle="Memo not found">
+        <div className="rounded-lg bg-white p-6 shadow">
+          <p className="text-gray-600">The requested memo could not be found.</p>
+          <Link href="/memos" className="mt-4 inline-block text-green-600 hover:text-green-700">
+            ← Back to Memos
+          </Link>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-  const statusColors = {
-    'Draft': 'bg-gray-100 text-gray-800',
-    'Pending Approval': 'bg-yellow-100 text-yellow-800',
-    'Approved': 'bg-green-100 text-green-800',
-    'Rejected': 'bg-red-100 text-red-800',
-    'Sent': 'bg-green-100 text-green-800',
-  };
-
-  const priorityColors = {
-    'Low': 'bg-gray-100 text-gray-800',
-    'Medium': 'bg-green-100 text-green-800',
-    'High': 'bg-orange-100 text-orange-800',
-    'Urgent': 'bg-red-100 text-red-800',
-  };
+  const statusText = memo.status.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+  const typeText = memo.type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+  const requiresApproval = memo.type === 'APPROVAL' || memo.type === 'EXTERNAL_LETTER';
 
   return (
     <DashboardLayout
       title={memo.referenceNumber}
-      subtitle={`Memo Details • ${memoStatus}`}
+      subtitle={`${typeText} Memo • ${statusText}`}
     >
       <div className="space-y-6">
         {/* Back Button */}
@@ -136,115 +118,146 @@ export default function MemoDetailPage({ params }: { params: Promise<{ id: strin
         </Link>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Main Content - 2 columns */}
+          {/* Main Content */}
           <div className="space-y-6 lg:col-span-2">
             {/* Memo Info Card */}
             <div className="rounded-lg bg-white p-6 shadow">
               <div className="mb-4 flex items-start justify-between">
-                <div className="flex-1">
+                <div>
                   <h2 className="text-2xl font-bold text-gray-900">{memo.subject}</h2>
-                  <p className="mt-2 text-sm text-gray-600">{memo.content}</p>
                 </div>
-                <div className="ml-4 flex flex-col gap-2">
-                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                    statusColors[memoStatus as keyof typeof statusColors]
-                  }`}>
-                    {memoStatus}
+                <div className="flex flex-col items-end gap-2">
+                  <span
+                    className={`rounded-full px-3 py-1 text-sm font-semibold text-gray-900 ${
+                      statusText === 'Approved'
+                        ? 'bg-green-100'
+                        : statusText === 'Rejected'
+                        ? 'bg-red-100'
+                        : statusText === 'Sent'
+                        ? 'bg-green-100'
+                        : 'bg-yellow-100'
+                    }`}
+                  >
+                    {statusText}
                   </span>
-                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                    priorityColors[memo.priority as keyof typeof priorityColors]
-                  }`}>
-                    {memo.priority}
+                  <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-gray-900">
+                    {typeText}
                   </span>
                 </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <p className="text-xs font-medium text-gray-500">Type</p>
-                  <p className="mt-1 text-sm text-gray-900">{memo.type}</p>
+                  <p className="text-xs font-medium text-gray-500">Created By</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {memo.createdBy.firstName} {memo.createdBy.lastName}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500">Created By</p>
-                  <p className="mt-1 text-sm text-gray-900">{memo.createdBy}</p>
+                  <p className="text-xs font-medium text-gray-500">Department</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {memo.department?.name || 'N/A'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500">Created At</p>
-                  <p className="mt-1 text-sm text-gray-900">{memo.createdAt}</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {new Date(memo.createdAt).toLocaleString()}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500">Recipients</p>
-                  <p className="mt-1 text-sm text-gray-900">{memo.recipientDepartment}</p>
+                  <p className="text-xs font-medium text-gray-500">Priority</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-gray-900 ${
+                        memo.priority === 'URGENT'
+                          ? 'bg-red-100'
+                          : memo.priority === 'HIGH'
+                          ? 'bg-orange-100'
+                          : 'bg-yellow-100'
+                      }`}
+                    >
+                      {memo.priority}
+                    </span>
+                  </p>
                 </div>
-                {memo.requiresApproval && (
+                {memo.approvedAt && (
                   <div>
-                    <p className="text-xs font-medium text-gray-500">Requires Approval From</p>
-                    <p className="mt-1 text-sm text-gray-900">{memo.approver}</p>
+                    <p className="text-xs font-medium text-gray-500">Approved At</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {new Date(memo.approvedAt).toLocaleString()}
+                    </p>
+                  </div>
+                )}
+                {memo.sentAt && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Sent At</p>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {new Date(memo.sentAt).toLocaleString()}
+                    </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Memo Viewer */}
+            {/* Memo Content */}
             <div className="rounded-lg bg-white p-6 shadow">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Memo Document</h3>
-                <button
-                  onClick={handleViewMemo}
-                  className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <ArrowDownTrayIcon className="h-4 w-4" />
-                  Open in New Tab
-                </button>
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">Memo Content</h3>
+              <div className="prose max-w-none">
+                <p className="whitespace-pre-wrap text-gray-700">{memo.body}</p>
               </div>
-
-              {/* Document Viewer Frame */}
-              <div className="rounded-lg border-2 border-gray-200 bg-white overflow-hidden">
-                {memo.fileUrl ? (
-                  <iframe
-                    src={memo.fileUrl}
-                    className="w-full h-[700px]"
-                    title="Memo Preview"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center p-8 text-center bg-gray-50">
-                    <div className="space-y-4">
-                      <DocumentTextIcon className="mx-auto h-16 w-16 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{memo.fileName}</p>
-                        <p className="text-xs text-gray-500 mt-1">Size: {memo.fileSize}</p>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Document preview not available
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <p className="mt-3 text-xs text-gray-500 text-center">
-                <DocumentTextIcon className="inline h-4 w-4 mr-1" />
-                {memo.fileName} ({memo.fileSize})
-              </p>
             </div>
+
+            {/* Recipients */}
+            {memo.recipients && memo.recipients.length > 0 && (
+              <div className="rounded-lg bg-white p-6 shadow">
+                <h3 className="mb-4 text-lg font-semibold text-gray-900">Recipients</h3>
+                <div className="space-y-3">
+                  {memo.recipients.map((recipient: any) => (
+                    <div
+                      key={recipient.id}
+                      className={`rounded-lg border-2 p-4 ${
+                        recipient.hasRead
+                          ? 'border-green-200 bg-green-50'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900">
+                              {recipient.user.firstName} {recipient.user.lastName}
+                            </p>
+                            {recipient.hasRead ? (
+                              <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                            ) : (
+                              <ClockIcon className="h-5 w-5 text-gray-400" />
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">
+                            {recipient.user.role} - {recipient.user.department?.name}
+                          </p>
+                          {recipient.hasRead && recipient.readAt && (
+                            <p className="mt-1 text-xs text-gray-500">
+                              Read on {new Date(recipient.readAt).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Sidebar - 1 column */}
+          {/* Sidebar */}
           <div className="space-y-6">
             {/* Quick Actions */}
             <div className="rounded-lg bg-white p-6 shadow">
               <h3 className="mb-4 text-lg font-semibold text-gray-900">Actions</h3>
               <div className="space-y-2">
-                <button
-                  onClick={handleDownloadMemo}
-                  className="flex w-full items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  <ArrowDownTrayIcon className="h-4 w-4" />
-                  Download Memo
-                </button>
-
-                {/* Approval Actions - Only show if pending approval */}
-                {memo.requiresApproval && memoStatus === 'Pending Approval' && (
+                {requiresApproval && statusText === 'Pending Approval' && (
                   <>
                     <button
                       onClick={() => handleApproval('approve')}
@@ -255,54 +268,37 @@ export default function MemoDetailPage({ params }: { params: Promise<{ id: strin
                     </button>
                     <button
                       onClick={() => handleApproval('reject')}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-600 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
                     >
                       <XMarkIcon className="h-4 w-4" />
                       Reject Memo
                     </button>
                   </>
                 )}
-
-                {/* Approval Status - Show if approved or rejected */}
-                {memoStatus === 'Approved' && (
-                  <div className="rounded-lg bg-green-50 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                      <p className="text-sm font-semibold text-green-900">Memo Approved</p>
-                    </div>
-                    <p className="text-xs text-green-800">
-                      This memo has been approved and can now be sent to recipients.
-                    </p>
-                  </div>
-                )}
-
-                {memoStatus === 'Rejected' && (
-                  <div className="rounded-lg bg-red-50 p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <XMarkIcon className="h-5 w-5 text-red-600" />
-                      <p className="text-sm font-semibold text-red-900">Memo Rejected</p>
-                    </div>
-                    <p className="text-xs text-red-800">
-                      This memo has been rejected. Please review and resubmit.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Memo Info */}
+            {/* Memo Stats */}
             <div className="rounded-lg bg-white p-6 shadow">
-              <h3 className="mb-4 text-lg font-semibold text-gray-900">Memo Information</h3>
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">Statistics</h3>
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <ClockIcon className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">Created:</span>
-                  <span className="font-medium text-gray-900">{memo.createdAt}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Total Recipients</span>
+                  <span className="font-medium text-gray-900">
+                    {memo.recipients?.length || 0}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <DocumentTextIcon className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">File Size:</span>
-                  <span className="font-medium text-gray-900">{memo.fileSize}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Read</span>
+                  <span className="font-medium text-gray-900">
+                    {memo.recipients?.filter((r: any) => r.hasRead).length || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Unread</span>
+                  <span className="font-medium text-gray-900">
+                    {memo.recipients?.filter((r: any) => !r.hasRead).length || 0}
+                  </span>
                 </div>
               </div>
             </div>
@@ -313,62 +309,33 @@ export default function MemoDetailPage({ params }: { params: Promise<{ id: strin
       {/* Approval Modal */}
       {showApprovalModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <div className="mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 {approvalAction === 'approve' ? 'Approve Memo' : 'Reject Memo'}
               </h3>
-              <button
-                onClick={() => {
-                  setShowApprovalModal(false);
-                  setApprovalComments('');
-                  setApprovalAction(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
+              <p className="mt-1 text-sm text-gray-600">
+                {approvalAction === 'approve'
+                  ? 'Are you sure you want to approve this memo?'
+                  : 'Are you sure you want to reject this memo?'}
+              </p>
             </div>
 
             <div className="space-y-4">
-              {/* Document Info */}
-              <div className="rounded-lg bg-gray-50 p-4">
-                <p className="text-sm font-medium text-gray-700 mb-1">Memo:</p>
-                <p className="text-sm text-gray-900">{memo.subject}</p>
-                <p className="text-xs text-gray-600 mt-1">Ref: {memo.referenceNumber}</p>
-              </div>
-
-              {/* Comments */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Comments {approvalAction === 'reject' ? '(Required)' : '(Optional)'}
+                <label className="block text-sm font-medium text-gray-700">
+                  Comments (Optional)
                 </label>
                 <textarea
                   value={approvalComments}
                   onChange={(e) => setApprovalComments(e.target.value)}
-                  rows={4}
-                  placeholder={approvalAction === 'approve'
-                    ? "Add any approval comments or notes..."
-                    : "Please provide reasons for rejection..."}
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  rows={3}
+                  placeholder="Add any comments or notes..."
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                 />
-              </div>
-
-              {/* Info */}
-              <div className={`rounded-lg p-3 ${
-                approvalAction === 'approve' ? 'bg-green-50' : 'bg-red-50'
-              }`}>
-                <p className={`text-xs ${
-                  approvalAction === 'approve' ? 'text-green-800' : 'text-red-800'
-                }`}>
-                  {approvalAction === 'approve'
-                    ? "Once approved, this memo will be marked as approved and can be sent to recipients."
-                    : "Rejecting this memo will return it to the creator for revision."}
-                </p>
               </div>
             </div>
 
-            {/* Actions */}
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => {
@@ -382,14 +349,13 @@ export default function MemoDetailPage({ params }: { params: Promise<{ id: strin
               </button>
               <button
                 onClick={submitApproval}
-                disabled={approvalAction === 'reject' && !approvalComments.trim()}
-                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium text-white ${
                   approvalAction === 'approve'
                     ? 'bg-green-600 hover:bg-green-700'
                     : 'bg-red-600 hover:bg-red-700'
                 }`}
               >
-                {approvalAction === 'approve' ? 'Confirm Approval' : 'Confirm Rejection'}
+                Confirm {approvalAction === 'approve' ? 'Approval' : 'Rejection'}
               </button>
             </div>
           </div>

@@ -29,11 +29,11 @@ interface Document {
 }
 
 const statusColors = {
-  Pending: 'bg-gray-100 text-gray-800',
-  'In Transit': 'bg-yellow-100 text-yellow-800',
-  'Under Review': 'bg-green-100 text-green-800',
-  Received: 'bg-green-100 text-green-800',
-  Archived: 'bg-green-100 text-green-800',
+  Pending: 'bg-gray-100 text-black',
+  'In Transit': 'bg-yellow-100 text-black',
+  'Under Review': 'bg-green-100 text-black',
+  Received: 'bg-green-100 text-black',
+  Archived: 'bg-green-100 text-black',
 };
 
 const recipients = [
@@ -256,8 +256,8 @@ export default function DocumentsPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                          statusColors[doc.status as keyof typeof statusColors]
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-gray-900 ${
+                          statusColors[doc.status as keyof typeof statusColors]?.split(' ')[0] || 'bg-gray-100'
                         }`}
                       >
                         {doc.status}

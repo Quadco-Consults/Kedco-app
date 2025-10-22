@@ -205,8 +205,8 @@ export default function MemosPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                          typeColors[memo.type as keyof typeof typeColors]
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-gray-900 ${
+                          typeColors[memo.type as keyof typeof typeColors]?.split(' ')[0] || 'bg-gray-100'
                         }`}
                       >
                         {memo.type}
@@ -214,8 +214,8 @@ export default function MemosPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                          priorityColors[memo.priority as keyof typeof priorityColors]
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-gray-900 ${
+                          priorityColors[memo.priority as keyof typeof priorityColors]?.split(' ')[0] || 'bg-gray-100'
                         }`}
                       >
                         {memo.priority}
@@ -223,8 +223,8 @@ export default function MemosPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                          statusColors[memo.status as keyof typeof statusColors]
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-gray-900 ${
+                          statusColors[memo.status as keyof typeof statusColors]?.split(' ')[0] || 'bg-gray-100'
                         }`}
                       >
                         {memo.status}
