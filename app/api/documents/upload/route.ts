@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { Priority, DocumentStatus } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,9 +60,9 @@ export async function POST(request: NextRequest) {
         fileSize: file.size,
         mimeType: file.type,
         isExternal: true,
-        priority: priority || 'MEDIUM',
+        priority: (priority as Priority) || Priority.MEDIUM,
         dueDate: dueDate ? new Date(dueDate) : null,
-        status: 'UNDER_REVIEW',
+        status: DocumentStatus.UNDER_REVIEW,
         createdById,
       },
       include: {
