@@ -59,7 +59,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       user: {
         ...userWithoutPassword,
-        department: user.department?.name || null,
+        department: user.department ? {
+          id: user.department.id,
+          name: user.department.name,
+        } : null,
       },
     });
   } catch (error) {
