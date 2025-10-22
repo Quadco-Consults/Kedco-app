@@ -5,6 +5,13 @@ import autoTable from 'jspdf-autotable';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
+// Extend jsPDF type to include autoTable
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable: {
+    finalY: number;
+  };
+}
+
 // GET /api/memos/[id]/pdf - Generate PDF for a memo
 export async function GET(
   request: NextRequest,
@@ -101,13 +108,12 @@ export async function GET(
     // Create PDF
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
     let yPosition = 25;
 
-    // KEDCO Brand Colors (Green theme)
-    const brandGreen = [22, 163, 74]; // green-600
-    const brandGreenLight = [220, 252, 231]; // green-100
-    const brandGreenDark = [21, 128, 61]; // green-700
+    // KEDCO Brand Colors (Green theme) - unused but kept for reference
+    // const brandGreen = [22, 163, 74]; // green-600
+    // const brandGreenLight = [220, 252, 231]; // green-100
+    // const brandGreenDark = [21, 128, 61]; // green-700
 
     // Add KEDCO Logo on the left
     try {
@@ -257,7 +263,7 @@ export async function GET(
         },
       });
 
-      yPosition = (doc as any).lastAutoTable.finalY + 15;
+      yPosition = (doc as jsPDFWithAutoTable).lastAutoTable.finalY + 15;
     }
 
     // Comments/Minutes Section
@@ -278,7 +284,6 @@ export async function GET(
       const column2X = leftMargin + columnWidth + 5;
 
       let currentColumn = 0;
-      let startY = yPosition;
       let maxYInRow = yPosition;
 
       for (let i = 0; i < displayComments.length; i++) {
