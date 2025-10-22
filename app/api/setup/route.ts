@@ -6,14 +6,12 @@ import * as bcrypt from 'bcryptjs';
 // After running once, you should disable or delete this endpoint
 export async function POST() {
   try {
-    // Check if admin user already exists
-    const existingAdmin = await prisma.user.findUnique({
-      where: { email: 'admin@kedco.com' },
-    });
+    // Check if departments already exist
+    const existingDepartments = await prisma.department.count();
 
-    if (existingAdmin) {
+    if (existingDepartments > 0) {
       return NextResponse.json(
-        { message: 'Database already seeded. Admin user exists.' },
+        { message: 'Database already seeded. Departments exist.', departmentCount: existingDepartments },
         { status: 200 }
       );
     }
@@ -46,11 +44,13 @@ export async function POST() {
       }),
     ]);
 
-    // Create Users
+    // Create Users (use upsert to avoid conflicts if users already exist)
     const hashedPassword = await bcrypt.hash('password123', 10);
 
-    await prisma.user.create({
-      data: {
+    await prisma.user.upsert({
+      where: { email: 'md@kedco.com' },
+      update: { departmentId: departments[0].id },
+      create: {
         email: 'md@kedco.com',
         password: hashedPassword,
         firstName: 'Managing',
@@ -62,8 +62,10 @@ export async function POST() {
       },
     });
 
-    await prisma.user.create({
-      data: {
+    await prisma.user.upsert({
+      where: { email: 'admin@kedco.com' },
+      update: { departmentId: departments[5].id },
+      create: {
         email: 'admin@kedco.com',
         password: hashedPassword,
         firstName: 'Admin',
@@ -75,8 +77,10 @@ export async function POST() {
       },
     });
 
-    await prisma.user.create({
-      data: {
+    await prisma.user.upsert({
+      where: { email: 'john.doe@kedco.com' },
+      update: { departmentId: departments[1].id },
+      create: {
         email: 'john.doe@kedco.com',
         password: hashedPassword,
         firstName: 'John',
@@ -87,8 +91,10 @@ export async function POST() {
       },
     });
 
-    await prisma.user.create({
-      data: {
+    await prisma.user.upsert({
+      where: { email: 'jane.smith@kedco.com' },
+      update: { departmentId: departments[2].id },
+      create: {
         email: 'jane.smith@kedco.com',
         password: hashedPassword,
         firstName: 'Jane',
