@@ -32,6 +32,7 @@ model User {
   documentMovements   DocumentMovement[]
   memoRecipients      MemoRecipient[]
   documentComments    DocumentComment[]
+  taggedComments      DocumentComment[] @relation("TaggedUserComments")
   memoApprovals       MemoApproval[]
   memoComments        MemoComment[]
 
@@ -98,14 +99,18 @@ model DocumentMovement {
 
 // Document Comment model (for external documents)
 model DocumentComment {
-  id          String     @id @default(uuid())
-  documentId  String
-  document    Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User       @relation(fields: [userId], references: [id])
-  comment     String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id            String     @id @default(uuid())
+  documentId    String
+  document      Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User       @relation(fields: [userId], references: [id])
+  comment       String
+  taggedUserId  String?    // User tagged for next action
+  taggedUser    User?      @relation("TaggedUserComments", fields: [taggedUserId], references: [id])
+  nextAction    String?    // Description of required next action
+  actionDueDate DateTime?  // Due date for the next action
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   @@map("document_comments")
 }

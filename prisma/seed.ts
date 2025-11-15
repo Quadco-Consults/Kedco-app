@@ -211,6 +211,10 @@ async function main() {
       status: 'UNDER_REVIEW',
       priority: 'URGENT',
       isExternal: true,
+      filePath: '/uploads/documents/1761102720127-gidadocv.pdf',
+      fileName: 'contract-proposal-xyz.pdf',
+      fileSize: 2457600, // ~2.4MB
+      mimeType: 'application/pdf',
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       currentDepartmentId: departments[6].id, // Legal
       createdById: adminUser.id,

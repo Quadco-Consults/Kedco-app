@@ -13,11 +13,15 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
   return (
     <ProtectedRoute>
-      <div className="flex h-screen overflow-hidden bg-gray-50">
+      <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100/50">
         <Sidebar />
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header title={title} subtitle={subtitle} />
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
+          <main className="flex-1 overflow-y-auto bg-slate-50/50 p-8">
+            <div className="mx-auto max-w-7xl">
+              {children}
+            </div>
+          </main>
         </div>
       </div>
     </ProtectedRoute>

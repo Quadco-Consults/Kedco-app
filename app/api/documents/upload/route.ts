@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { put } from '@vercel/blob';
 import { Priority, DocumentStatus } from '@prisma/client';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +16,17 @@ export async function POST(request: NextRequest) {
     const createdById = formData.get('createdById') as string;
     const recipientsJson = formData.get('recipients') as string;
 
+    console.log('Upload request data:', {
+      fileExists: !!file,
+      fileName: file?.name,
+      title,
+      description,
+      priority,
+      dueDate,
+      createdById,
+      recipients: recipientsJson
+    });
+
     if (!file || !title || !createdById) {
       return NextResponse.json(
         { error: 'File, title, and creator are required' },
@@ -21,16 +34,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify the user exists
+    const user = await prisma.user.findUnique({
+      where: { id: createdById },
+      select: { id: true, firstName: true, lastName: true }
+    });
+
+    if (!user) {
+      console.error('User not found:', createdById);
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('Found user:', user);
+
     // Generate unique filename
     const timestamp = Date.now();
     const originalName = file.name;
-    const filename = `documents/${timestamp}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const safeFilename = `${timestamp}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-    // Upload to Vercel Blob Storage
-    const blob = await put(filename, file, {
-      access: 'public',
-      addRandomSuffix: false,
-    });
+    // Create uploads directory if it doesn't exist
+    const uploadDir = join(process.cwd(), 'public', 'uploads', 'documents');
+    if (!existsSync(uploadDir)) {
+      await mkdir(uploadDir, { recursive: true });
+    }
+
+    // Save file locally
+    const filePath = join(uploadDir, safeFilename);
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    await writeFile(filePath, buffer);
+
+    // Create file URL for serving
+    const fileUrl = `/uploads/documents/${safeFilename}`;
 
     // Generate reference number
     const count = await prisma.document.count();
@@ -45,7 +83,7 @@ export async function POST(request: NextRequest) {
         referenceNumber,
         title,
         description,
-        filePath: blob.url,
+        filePath: fileUrl,
         fileName: originalName,
         fileSize: file.size,
         mimeType: file.type,

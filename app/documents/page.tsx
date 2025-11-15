@@ -12,6 +12,9 @@ import {
   XMarkIcon,
   PaperClipIcon,
 } from '@heroicons/react/24/outline';
+import AdvancedFileUpload from '@/components/ui/AdvancedFileUpload';
+import AdvancedSearch from '@/components/search/AdvancedSearch';
+import BulkOperations from '@/components/operations/BulkOperations';
 
 // Types for documents
 interface Document {
@@ -61,6 +64,10 @@ export default function DocumentsPage() {
   const [dueDate, setDueDate] = useState('');
   const [uploading, setUploading] = useState(false);
 
+  // Bulk operations state
+  const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
+  const [showBulkOperations, setShowBulkOperations] = useState(false);
+
   // Fetch documents
   useEffect(() => {
     fetchDocuments();
@@ -93,11 +100,6 @@ export default function DocumentsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadedFile(e.target.files[0]);
-    }
-  };
 
   const handleRecipientToggle = (recipientId: string) => {
     setSelectedRecipients((prev) =>
@@ -151,137 +153,143 @@ export default function DocumentsPage() {
   return (
     <DashboardLayout title="Documents" subtitle="Track and manage document movements">
       <div className="space-y-6">
-        {/* Actions Bar */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 items-center gap-4">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search documents..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-              />
-            </div>
+        {/* Advanced Search */}
+        <AdvancedSearch
+          onSearchResults={(results) => {
+            // Transform search results to match Document interface if needed
+            const transformedResults = results.map(result => ({
+              id: result.id,
+              referenceNumber: result.referenceNumber,
+              title: result.title,
+              description: '', // Add if needed
+              currentDepartment: result.department,
+              status: result.status,
+              priority: result.priority,
+              isExternal: result.isExternal,
+              createdBy: result.creator,
+              createdAt: result.createdAt,
+              updatedAt: result.createdAt // Use same as created for now
+            }));
+            setDocuments(transformedResults);
+          }}
+          onFiltersChange={(filters) => {
+            // Update search term for compatibility with existing code
+            setSearchTerm(filters.query);
+            setStatusFilter(filters.status.length > 0 ? filters.status[0] : 'All');
+          }}
+        />
 
-            {/* Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-gray-300 px-4 py-2 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-            >
-              <option value="All">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="In Transit">In Transit</option>
-              <option value="Received">Received</option>
-              <option value="Archived">Archived</option>
-            </select>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-              <FunnelIcon className="h-4 w-4" />
-              Filters
-            </button>
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
-            >
-              <ArrowUpTrayIcon className="h-4 w-4" />
-              Upload External Document
-            </button>
-            <Link
-              href="/documents/new"
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
-            >
-              <PlusIcon className="h-4 w-4" />
-              New Document
-            </Link>
-          </div>
+        {/* Action Buttons - Moved after search */}
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-2 rounded-lg border border-green-600 bg-white px-4 py-2 text-sm font-medium text-green-600 hover:bg-green-50"
+          >
+            <ArrowUpTrayIcon className="h-4 w-4" />
+            Upload External Document
+          </button>
+          <Link
+            href="/documents/new"
+            className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+          >
+            <PlusIcon className="h-4 w-4" />
+            New Document
+          </Link>
         </div>
 
-        {/* Documents Table */}
-        <div className="overflow-hidden rounded-lg bg-white shadow">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Reference No.
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Current Department
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Created By
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Last Updated
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-500">
-                    Loading documents...
-                  </td>
-                </tr>
-              ) : filteredDocuments.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-gray-500">
-                    No documents found
-                  </td>
-                </tr>
-              ) : (
-                filteredDocuments.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-gray-50">
-                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-green-600">
-                      <Link href={`/documents/${doc.id}`}>{doc.referenceNumber}</Link>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">{doc.title}</td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                      {doc.currentDepartment}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold text-gray-900 ${
-                          statusColors[doc.status as keyof typeof statusColors]?.split(' ')[0] || 'bg-gray-100'
-                        }`}
-                      >
-                        {doc.status}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                      {doc.createdBy}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                      {doc.updatedAt}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                      <Link
-                        href={`/documents/${doc.id}`}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        {/* Bulk Operations */}
+        {selectedDocuments.length > 0 && (
+          <BulkOperations
+            selectedItems={selectedDocuments}
+            onOperationComplete={(operation, itemIds) => {
+              // Handle bulk operation completion
+              console.log(`Bulk ${operation} completed for:`, itemIds);
+              setSelectedDocuments([]);
+              // Refresh documents list if needed
+              fetchDocuments();
+            }}
+            onCancel={() => setSelectedDocuments([])}
+          />
+        )}
+
+        {/* Documents Grid */}
+        <div className="space-y-4">
+          {loading ? (
+            <div className="rounded-lg bg-white p-8 shadow text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-600 border-r-transparent mb-4"></div>
+              <p className="text-gray-500">Loading documents...</p>
+            </div>
+          ) : filteredDocuments.length === 0 ? (
+            <div className="rounded-lg bg-white p-12 shadow text-center">
+              <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 48 48">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.713-3.714M14 40v-4c0-1.313.253-2.566.713-3.714m0 0A9.971 9.971 0 0124 30a9.971 9.971 0 018.287 6.286" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No documents found</h3>
+              <p className="text-gray-500">Get started by creating your first document or adjusting your search filters.</p>
+            </div>
+          ) : (
+            filteredDocuments.map((doc) => (
+              <div key={doc.id} className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedDocuments.includes(doc.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDocuments([...selectedDocuments, doc.id]);
+                        } else {
+                          setSelectedDocuments(selectedDocuments.filter(id => id !== doc.id));
+                        }
+                      }}
+                      className="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">{doc.title}</h3>
+                        <span className="text-sm font-medium text-green-600">{doc.referenceNumber}</span>
+                        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                          doc.status === 'ARCHIVED' ? 'bg-green-100 text-green-800' :
+                          doc.status === 'IN_TRANSIT' ? 'bg-yellow-100 text-yellow-800' :
+                          doc.status === 'UNDER_REVIEW' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {doc.status.replace('_', ' ')}
+                        </span>
+                        {doc.isExternal && (
+                          <span className="inline-flex rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-800">
+                            External
+                          </span>
+                        )}
+                      </div>
+                      {doc.description && (
+                        <p className="text-gray-600 text-sm mb-3">{doc.description}</p>
+                      )}
+                      <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                        <span>
+                          <span className="font-medium">Department:</span> {doc.isExternal ? 'External' : doc.currentDepartment}
+                        </span>
+                        <span>
+                          <span className="font-medium">Created by:</span> {doc.createdBy.firstName} {doc.createdBy.lastName}
+                        </span>
+                        <span>
+                          <span className="font-medium">Updated:</span> {new Date(doc.updatedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/documents/${doc.id}`}
+                    className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                  >
+                    View
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Pagination */}
@@ -317,46 +325,18 @@ export default function DocumentsPage() {
             </div>
 
             <div className="space-y-6">
-              {/* File Upload */}
+              {/* Advanced File Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Document File *
                 </label>
-                <div className="mt-2">
-                  {!uploadedFile ? (
-                    <label className="flex cursor-pointer flex-col items-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-8 transition-colors hover:border-green-400 hover:bg-green-50">
-                      <ArrowUpTrayIcon className="mb-2 h-12 w-12 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-600">
-                        Click to upload document
-                      </span>
-                      <span className="mt-1 text-xs text-gray-500">PDF, DOC, DOCX up to 10MB</span>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
-                  ) : (
-                    <div className="flex items-center justify-between rounded-lg border border-green-300 bg-green-50 px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <PaperClipIcon className="h-5 w-5 text-green-600" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{uploadedFile.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setUploadedFile(null)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <XMarkIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <AdvancedFileUpload
+                  onFileSelect={setUploadedFile}
+                  onFileRemove={() => setUploadedFile(null)}
+                  selectedFile={uploadedFile}
+                  accept=".pdf,.doc,.docx"
+                  maxSize={10}
+                />
               </div>
 
               {/* Document Title */}

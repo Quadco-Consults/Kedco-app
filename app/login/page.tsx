@@ -7,7 +7,7 @@ import { LockClosedIcon, EnvelopeIcon, ExclamationCircleIcon } from '@heroicons/
 
 export default function LoginPage() {
   const [email, setEmail] = useState('admin@kedco.com');
-  const [password, setPassword] = useState('admin123');
+  const [password, setPassword] = useState('password123');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showCredentials, setShowCredentials] = useState(false);
@@ -193,22 +193,22 @@ export default function LoginPage() {
                 <div className="mt-4 space-y-2 rounded-lg bg-gray-50 p-4 text-sm">
                   <p className="font-semibold text-gray-700">Demo Accounts:</p>
                   <button
-                    onClick={() => handleDemoLogin('admin@kedco.com', 'admin123')}
+                    onClick={() => handleDemoLogin('admin@kedco.com', 'password123')}
                     className="block w-full rounded bg-white p-2 text-left hover:bg-gray-100"
                   >
-                    <span className="font-medium">Admin:</span> admin@kedco.com / admin123
+                    <span className="font-medium">Admin:</span> admin@kedco.com / password123
                   </button>
                   <button
-                    onClick={() => handleDemoLogin('md@kedco.com', 'md123')}
+                    onClick={() => handleDemoLogin('md@kedco.com', 'password123')}
                     className="block w-full rounded bg-white p-2 text-left hover:bg-gray-100"
                   >
-                    <span className="font-medium">MD:</span> md@kedco.com / md123
+                    <span className="font-medium">MD:</span> md@kedco.com / password123
                   </button>
                   <button
-                    onClick={() => handleDemoLogin('john.doe@kedco.com', 'john123')}
+                    onClick={() => handleDemoLogin('john.doe@kedco.com', 'password123')}
                     className="block w-full rounded bg-white p-2 text-left hover:bg-gray-100"
                   >
-                    <span className="font-medium">Dept Head:</span> john.doe@kedco.com / john123
+                    <span className="font-medium">Dept Head:</span> john.doe@kedco.com / password123
                   </button>
                 </div>
               )}
