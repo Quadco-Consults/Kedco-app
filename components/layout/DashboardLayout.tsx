@@ -18,7 +18,7 @@ export default function DashboardLayout({ children, title, subtitle }: Dashboard
         <div className="flex flex-1 flex-col overflow-hidden">
           <Header title={title} subtitle={subtitle} />
           <main className="flex-1 overflow-y-auto bg-slate-50/50 p-8">
-            <div className="mx-auto max-w-7xl">
+            <div className="w-full">
               {children}
             </div>
           </main>
